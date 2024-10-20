@@ -17,7 +17,7 @@
 //para los numerros random, NO TOCAR
 #define NormRANu (2.3283063671E-10F)
 
-#define T 2000 //Tiempo en cualquier algoritmo
+#define T 500 //Tiempo en cualquier algoritmo
 //El numero de pasos vendrá dado por T/h, así pasa el mismo tiempo independientemente de h
 
 #define Ng 10000 //Numero de datos gaussianos que se quieren, es solo para comprobaciones, SIEMPRE PAR
@@ -100,7 +100,7 @@ int main(){
     //Este ejecuta los algoritmos para un único valor de h y nabla
     #ifdef unico
         h = 0.001;
-        nabla = 0.1;
+        nabla = 10;
         Euler_Maruyama(posision_inicial, momento_inicial, h, nabla);
         Runge_Kutta (posision_inicial, momento_inicial, h, nabla);
         verlet (posision_inicial, momento_inicial, h, nabla);
@@ -460,7 +460,6 @@ void Runge_Kutta (double posicion, double momento, double h, double nabla){
 
         termino_estocastico_Z(factor_estocastico, dos_terminos_estocasticos);
 
-
         for(j=0;j<2;j++){
             //De nuevo, de cada paso de tiempo hay que hacer 2
             Z = dos_terminos_estocasticos[j];
@@ -471,7 +470,7 @@ void Runge_Kutta (double posicion, double momento, double h, double nabla){
 
             //Paso 2
             f_x2=f_pn(momento+h*g_p1);
-            g_p2=g_xn_pn(posicion+h*f_x1, momento+g_p1, nabla_dividido_m);
+            g_p2=g_xn_pn(posicion+h*f_x1, momento+h*g_p1, nabla_dividido_m);
 
             //Final, calculo de nuevo punto en el espacio de fases
             posicion += h_medios*(f_x1+f_x2);
