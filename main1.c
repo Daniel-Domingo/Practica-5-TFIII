@@ -10,7 +10,7 @@
 #include <string.h>
 
 #define m 1     //masa
-#define k 1     //cte el·stica
+#define k 1     //cte el√°stica
 #define K_b_T 1 //cte de Boltzmann por temperatura
 #define PI 3.14159265358979323846
 
@@ -18,20 +18,20 @@
 #define NormRANu (2.3283063671E-10F)
 
 #define T 500 //Tiempo en cualquier algoritmo
-//El numero de pasos vendr· dado por T/h, asÌ pasa el mismo tiempo independientemente de h
+//El numero de pasos vendr√° dado por T/h, as√≠ pasa el mismo tiempo independientemente de h
 
 #define Ng 10000 //Numero de datos gaussianos que se quieren, es solo para comprobaciones, SIEMPRE PAR
 #define Intervalo 100 //Numero de intervalos en el histograma
 
 
-///Estos ˙ltimos son para los ifdef:
+///Estos √∫ltimos son para los ifdef:
 
 //si se pone en "bucle" saca varios archivos de una para distintos h y nabla (en principio todos los que piden)
 //si se pone en "unico" saca un solo archivo para un dado h y nabla
 #define unico //bucle
 
 
-//Calcular las energÌas durante el proceso, si (true) o no (false)
+//Calcular las energ√≠as durante el proceso, si (true) o no (false)
 #define true
 
 
@@ -82,7 +82,7 @@ unsigned char ind_ran, ig1, ig2, ig3;
 
 
 
-/// -----Primera parte: OSCILADOR ARM”NICO----- ///
+/// -----Primera parte: OSCILADOR ARM√ìNICO----- ///
 int main(){
 
     //variables
@@ -91,13 +91,13 @@ int main(){
 
 
 
-    // Inicializamos la rueda de n˙meros random de Parisi-Rapuano
+    // Inicializamos la rueda de n√∫meros random de Parisi-Rapuano
     ini_ran(123456789);
 
 
 
     ///EJECUTAMOS ALGORITMOS
-    //Este ejecuta los algoritmos para un ˙nico valor de h y nabla
+    //Este ejecuta los algoritmos para un √∫nico valor de h y nabla
     #ifdef unico
         h = 0.001;
         nabla = 10;
@@ -106,7 +106,7 @@ int main(){
         verlet (posision_inicial, momento_inicial, h, nabla);
     #endif // unico
 
-    //Este bucle lo ˙nico que hace es que salgan varios archivos con distintos h y nabla de una, si se prefiere
+    //Este bucle lo √∫nico que hace es que salgan varios archivos con distintos h y nabla de una, si se prefiere
     #ifdef bucle
         int i, j;
         h = 0.00001;
@@ -130,7 +130,7 @@ int main(){
 
 
     //aqui ejecuto las funciones que sacan los numeros gaussianos aleatorios
-    //son solo de comprobaciÛn asÌ que para ejecutar el programa de forma normal no se deben activar
+    //son solo de comprobaci√≥n as√≠ que para ejecutar el programa de forma normal no se deben activar
     /*
     double vector_numeros_gaussianos[N], histograma_matriz[Intervalo];
     generador_vector_gaussiano(vector_numeros_gaussianos);
@@ -150,7 +150,7 @@ int main(){
 
 
 
-///N˙meros aleatorios
+///N√∫meros aleatorios
 
 //Generador de C de numeros random
 //Mejor utilizar un Parisi-Rapuano
@@ -200,12 +200,12 @@ double Random(void){
 
 
 
-//Genera un n˙mero aleatorio con distribuciÛn gaussiana, a partir de un numero random en el intervalo [0,1)
+//Genera un n√∫mero aleatorio con distribuci√≥n gaussiana, a partir de un numero random en el intervalo [0,1)
 void num_aleatorio_gaussiano (double *dos_numeros_gaussianos){
     double aleatorio_uniforme_1, aleatorio_uniforme_2, auxiliar_1, auxiliar_2;
 
-    ///AquÌ hay un problema con el algoritmo: Cuando sale aleatorio_uniforme_1 = 0 ---> ln(0)=-inf; y da error
-    //No se como se supone que deberÌamos arreglarlo, de momento solo voy a poner una cl·usula de que no sea igual a cero
+    ///Aqu√≠ hay un problema con el algoritmo: Cuando sale aleatorio_uniforme_1 = 0 ---> ln(0)=-inf; y da error
+    //No se como se supone que deber√≠amos arreglarlo, de momento solo voy a poner una cl√°usula de que no sea igual a cero
     aleatorio_uniforme_1=Random ();
     while (aleatorio_uniforme_1 == 0.0)
         aleatorio_uniforme_1=Random ();
@@ -214,16 +214,16 @@ void num_aleatorio_gaussiano (double *dos_numeros_gaussianos){
     auxiliar_1=sqrt(-2*log(aleatorio_uniforme_1));
     auxiliar_2=2*PI*aleatorio_uniforme_2;
 
-    //en la presentaciÛn dan como dos posibilidades, seg˙n las pruebas que he hecho es indistinto usar una u otra
+    //en la presentaci√≥n dan como dos posibilidades, seg√∫n las pruebas que he hecho es indistinto usar una u otra
     dos_numeros_gaussianos[0]= auxiliar_1*cos(auxiliar_2);
 
-    //Esta serÌa la segunda forma, solo cambia el cos por el sen
+    //Esta ser√≠a la segunda forma, solo cambia el cos por el sen
     dos_numeros_gaussianos[1] = auxiliar_1*sin(auxiliar_2);
 }
 
 
 
-//Esta funciÛn es para comprobar que la funcion de numeros gaussianos rulaba bien, probablemente se quitar· en un futuro
+//Esta funci√≥n es para comprobar que la funcion de numeros gaussianos rulaba bien, probablemente se quitar√° en un futuro
 void generador_vector_gaussiano (/*vector de salida*/ double *vector_numeros_gaussianos){
     int i, N;
 
@@ -242,8 +242,8 @@ void generador_vector_gaussiano (/*vector de salida*/ double *vector_numeros_gau
 }
 
 
-//Lo mismo, esta funciÛn es para comprobar que la funcion de numeros gaussianos rulaba bien, probablemente se quitar· en un futuro
-//Aunque, tambiÈn nos sirve para lo de comprobar que la distribuciÛn de posiciones y velocidades sea gaussiana
+//Lo mismo, esta funci√≥n es para comprobar que la funcion de numeros gaussianos rulaba bien, probablemente se quitar√° en un futuro
+//Aunque, tambi√©n nos sirve para lo de comprobar que la distribuci√≥n de posiciones y velocidades sea gaussiana
 void histograma (double *V/*matriz de entrada*/, double *histograma_matriz /*matriz de salida*/){
     //Variables matriz histograma
     int asignacion, i, N;
@@ -279,7 +279,7 @@ void histograma (double *V/*matriz de entrada*/, double *histograma_matriz /*mat
         histograma_matriz[i]=histograma_matriz[i]/N;
     }
 
-//gr·fico en gnuplot
+//gr√°fico en gnuplot
     FILE* f;
     f = fopen("histo.txt", "w");
     int eje_x;
@@ -289,7 +289,7 @@ void histograma (double *V/*matriz de entrada*/, double *histograma_matriz /*mat
     }
     fclose(f);
 
-//comprobaciÛn de que las cosas vayan bien xd
+//comprobaci√≥n de que las cosas vayan bien xd
     printf("%f\n", max_desconocido);
 }
 
@@ -310,7 +310,7 @@ double f_pn (double momento){
 
 
 
-///IMPORTANTE, esto es (la menos derivada de) el potencial que tendremos que cambiar en la siguiente parte asÌ que ojito
+///IMPORTANTE, esto es (la menos derivada de) el potencial que tendremos que cambiar en la siguiente parte as√≠ que ojito
 double fuerza (double posicion){
     double grad_Vx;
     grad_Vx=-k*posicion;
@@ -318,7 +318,7 @@ double fuerza (double posicion){
 }
 
 
-//TÈrmino de rozamiento o damping
+//T√©rmino de rozamiento o damping
 double damping (double momento, double nabla_dividido_m){
     double rozamiento;
     rozamiento = -nabla_dividido_m*momento;
@@ -329,14 +329,14 @@ double damping (double momento, double nabla_dividido_m){
 
 //ecuacion_oscilador_momento_punto, calcula la parte NO ESTOCASTICA de p_punto, en los algoritmos esta suele salir como g(x_n, p_n)
 double g_xn_pn (double posicion, double momento, double nabla_dividido_m){
-    double p_punto;  //aquÌ lo llamo p_punto, pero realmente no lo es porque le falta el tÈrmino estoc·stico
+    double p_punto;  //aqu√≠ lo llamo p_punto, pero realmente no lo es porque le falta el t√©rmino estoc√°stico
     p_punto = damping (momento, nabla_dividido_m) + fuerza (posicion);
     return p_punto;
 }
 
 
 
-//este es el tÈrmino estoc·stico, que va incluido en la ecuaciÛn del momento
+//este es el t√©rmino estoc√°stico, que va incluido en la ecuaci√≥n del momento
 //Saca 2 para aprovechar mejor la funcion generadora de numeros gaussianos
 void termino_estocastico_Z (double factor_estocastico, double *dos_terminos_estocasticos){
     double dos_numeros_gaussianos[2];
@@ -374,7 +374,7 @@ void Euler_Maruyama (double posicion, double momento, double h, double nabla){
     FILE *f;
     f = fopen(nombre_archivo, "w");
 
-    //El algoritmo en verdad son solo estas 5 lÌneas
+    //El algoritmo en verdad son solo estas 5 l√≠neas
     pasos = (int)(T/h);
     factor_estocastico = sqrt(2*nabla*K_b_T*h);
     nabla_dividido_m = nabla/m;
@@ -433,7 +433,7 @@ void Euler_Maruyama (double posicion, double momento, double h, double nabla){
 
 void Runge_Kutta (double posicion, double momento, double h, double nabla){
     int i, pasos, j;
-    //Uso la notaciÛn del power point de clase, las barras bajas se deben entender como "sub", p.ej f sub x1
+    //Uso la notaci√≥n del power point de clase, las barras bajas se deben entender como "sub", p.ej f sub x1
     double f_x1, f_x2, g_p1, g_p2, Z, h_medios, factor_estocastico, dos_terminos_estocasticos[2], nabla_dividido_m, mediapotencial, mediacinetica;
 
     //Toda la parafernalia de los char es para poder sacar todos los archivos de distintas h y nabla en un solo bucle
@@ -535,7 +535,7 @@ void Runge_Kutta (double posicion, double momento, double h, double nabla){
 void verlet (double posicion, double momento, double h, double nabla){
     int i, j, pasos;
     double mediapotencial,mediacinetica;
-    //Uso la notaciÛn del power point de clase, las barras bajas se deben entender como "sub", p.ej f sub x1
+    //Uso la notaci√≥n del power point de clase, las barras bajas se deben entender como "sub", p.ej f sub x1
     double factor_estocastico, dos_terminos_estocasticos[2], a, b, factor_posicion, fuerza_ahora, h_medios, Z;
 
     //Toda la parafernalia de los char es para poder sacar todos los archivos de distintas h y nabla en un solo bucle
