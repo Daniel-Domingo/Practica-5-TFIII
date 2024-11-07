@@ -1,5 +1,5 @@
 ///     -------Practica 5 TF3, sim molecular------      ///
-//actualizado el 04-11-24
+//actualizado el 07-11-24
 
 
 
@@ -18,7 +18,7 @@
 //para los numerros random, NO TOCAR
 #define NormRANu (2.3283063671E-10F)
 
-#define T 100000 //Tiempo en cualquier algoritmo
+#define T 600000 //Tiempo en cualquier algoritmo
 //El numero de pasos vendr� dado por T/h, as� pasa el mismo tiempo independientemente de h
 #define h 0.01
 const int pasos = (int)T/h;
@@ -29,9 +29,9 @@ const int pasos = (int)T/h;
 
 ///Estos �ltimos son para los ifdef:
 
-//si se pone en "bucle" saca varios archivos de una para distintos h y nabla (en principio todos los que piden)
-//si se pone en "unico" saca un solo archivo para un dado h y nabla
-#define bucle //unico
+//si se pone en "bucle" saca varios archivos de una para distintos h y eta (en principio todos los que piden)
+//si se pone en "unico" saca un solo archivo para un dado h y eta
+#define bucle //unico //bucle
 
 
 //Calcular las energ�as durante el proceso, si (true) o no (false)
@@ -39,6 +39,9 @@ const int pasos = (int)T/h;
 
 //Para elegir el tipo de potencial que se utiliza
 #define doble_pozo //oscilador_armonico
+
+//Para que el programa saque los ficheros del algoritmo de verlet
+//#define ficheros
 
 
 
@@ -62,7 +65,7 @@ double f_pn (double momento);
 void termino_estocastico_Z (double factor_estocastico, double *dos_terminos_estocasticos);
 
 //Algoritmos
-void verlet (double posicion, double momento, double nabla, double *array_posiciones);
+void verlet (double posicion, double momento, double eta, double *array_posiciones);
 
 //Datos para medir
 double energia_cinetica (double momento);
@@ -83,24 +86,24 @@ unsigned char ind_ran, ig1, ig2, ig3;
 int main(){
 
     //variables
-    double /*coef de viscosidad*/nabla, t_estancia_medio;
+    double /*coef de viscosidad*/eta, t_estancia_medio;
     double /*Pto inicial en el espacio de fases*/ momento_inicial=0, posicion_inicial=0;
-    double t_estancia[500];
+    double t_estancia[1000];
     int i, j, contador;
     FILE *f;
     // Inicializamos la rueda de n�meros random de Parisi-Rapuano
     ini_ran(123456789);
 
-    for(i = 0; i < 500; i++){
+    for(i = 0; i < 1000; i++){
         t_estancia[i] = 0;
     }
         
 
     ///EJECUTAMOS ALGORITMOS
-    //Este ejecuta los algoritmos para un �nico valor de nabla
+    //Este ejecuta los algoritmos para un �nico valor de eta
     #ifdef unico
-        nabla = 1;
-        verlet (posicion_inicial, momento_inicial, nabla, t_estancia);
+        eta = 1;
+        verlet (posicion_inicial, momento_inicial, eta, t_estancia);
 
         //comprobacion de t_estancia
         //for(i = 0; i < 500; i++){
@@ -110,14 +113,14 @@ int main(){
         //contador es para saber cuantos valores validos (distintos de 0) tiene t_estancia
         contador = 0;
 
-        for(i = 0; i < 500; i++){
+        for(i = 0; i < 1000; i++){
             if(t_estancia[i] != 0){
                 contador += 1;
             }
         }
 
         //comprobacion de contador
-        //printf("contador = %i\n", contador);
+        printf("contador = %i\n", contador);
 
         t_estancia_medio = 0;
 
@@ -128,32 +131,35 @@ int main(){
         t_estancia_medio = t_estancia_medio/contador;
 
         //comprobacion de t_estancia_medio
-        //printf("t_estancia_medio = %f\n", t_estancia_medio);
+        printf("t_estancia_medio = %f\n", t_estancia_medio);
         
         //nueva funcion histograma
-        Histograma(0, 200000, contador, Intervalo, t_estancia);
+        Histograma(0, 2000, contador, Intervalo, t_estancia);
 
     #endif // unico
 
-    //Este bucle lo �nico que hace es que salgan varios archivos con distintos nabla de una, si se prefiere
+    //Este bucle lo �nico que hace es que salgan varios archivos con distintos eta de una, si se prefiere
     #ifdef bucle
         f = fopen("t_medio_frente_a_damping.txt", "w");
-        nabla = 0.01;
-        for (j = 0; j < 500; j++){
-            nabla = nabla + 0.01*j;
-            fprintf(f, "%f ", nabla);
-            verlet (posicion_inicial, momento_inicial, nabla, t_estancia);
+        eta = 0.01;
+        for (j = 0; j < 50; j++){
+            for(i = 0; i < 1000; i++){
+                t_estancia[i] = 0;
+            }
+            fprintf(f, "%f ", eta);
+            verlet (posicion_inicial, momento_inicial, eta, t_estancia);
+            eta += 0.1;
 
             contador = 0;
 
-            for(i = 0; i < 500; i++){
+            for(i = 0; i < 1000; i++){
                 if(t_estancia[i] != 0){
                     contador += 1;
                 }
             }
 
             //comprobacion de contador
-            //printf("contador = %i\n", contador);
+            printf("contador = %i\n", contador);
 
             t_estancia_medio = 0;
 
@@ -164,7 +170,7 @@ int main(){
             t_estancia_medio = t_estancia_medio/contador;
 
             //comprobacion de t_estancia_medio
-            printf("t_estancia_medio = %f\n", t_estancia_medio);
+            //printf("t_estancia_medio = %f\n", t_estancia_medio);
 
             fprintf(f, "%f\n", t_estancia_medio);
 
@@ -219,7 +225,7 @@ void Histograma(int a, int b, int N, int divisiones,  double *array)
     printf("La anchura es: %f El Area es: %f",anchura,Area);
     for (i=0; i<divisiones; i++)
     {
-        fprintf(f,"%d %f\n",(int)(a+i*anchura),freq[i]/Area);
+        fprintf(f,"%d %d\n",(int)(a+i*anchura),freq[i]);
     }
     fclose(f);
 
@@ -434,7 +440,7 @@ double g_xn_pn (double posicion, double momento, double nabla_dividido_m){
 void termino_estocastico_Z (double factor_estocastico, double *dos_terminos_estocasticos){
     double dos_numeros_gaussianos[2];
     num_aleatorio_gaussiano(dos_numeros_gaussianos);
-    //Para que no tenga que pararse cada vez a calcular, el factor = sqrt(2*nabla*K_b_T*h)
+    //Para que no tenga que pararse cada vez a calcular, el factor = sqrt(2*eta*K_b_T*h)
     dos_terminos_estocasticos[0] = factor_estocastico*dos_numeros_gaussianos[0];
     dos_terminos_estocasticos[1] = factor_estocastico*dos_numeros_gaussianos[1];
 }
@@ -447,17 +453,17 @@ void termino_estocastico_Z (double factor_estocastico, double *dos_terminos_esto
 ///     ALGORITMOS     ///
 
 
-void verlet (double posicion, double momento, double nabla, double *t_estancia){
+void verlet (double posicion, double momento, double eta, double *t_estancia){
     int i, j, l, pasos, contador_pos, contador_neg;
     double mediapotencial,mediacinetica;
     //Uso la notaci�n del power point de clase, las barras bajas se deben entender como "sub", p.ej f sub x1
     double factor_estocastico, dos_terminos_estocasticos[2], a, b, factor_posicion, fuerza_ahora, h_medios, Z, posicion_anterior;
 
-    //Toda la parafernalia de los char es para poder sacar todos los archivos de distintas h y nabla en un solo bucle
+    //Toda la parafernalia de los char es para poder sacar todos los archivos de distintas h y eta en un solo bucle
     char nombre_archivo[1023]="Verlet_h=", nombre_ocupacion[1023]="Ocupacion_Verlet_h=", especificador_h[50], especificador_nabla[50], nombre_archivo_parte2[]="_nabla=", nombre_archivo_fin[]=".txt";
     sprintf(especificador_h, "%f", h);
     strncat(nombre_archivo, especificador_h, 1024);
-    sprintf(especificador_nabla, "%f", nabla);
+    sprintf(especificador_nabla, "%f", eta);
     strncat(nombre_archivo, nombre_archivo_parte2, 1024);
     strncat(nombre_archivo, especificador_nabla, 1024);
     strncat(nombre_archivo, nombre_archivo_fin, 1024);
@@ -467,14 +473,16 @@ void verlet (double posicion, double momento, double nabla, double *t_estancia){
     strncat(nombre_ocupacion, especificador_nabla, 1024);
     strncat(nombre_ocupacion, nombre_archivo_fin, 1024);
 
+    #ifdef ficheros
     FILE *f, *g;
     f = fopen(nombre_archivo, "w");
     g = fopen(nombre_ocupacion, "w");
+    #endif
 
     pasos = (int)(T/h);
-    factor_estocastico = sqrt(2*nabla*K_b_T*h);
+    factor_estocastico = sqrt(2*eta*K_b_T*h);
     h_medios = h/2;
-    b = 1/(1+nabla*h_medios/m);
+    b = 1/(1+eta*h_medios/m);
     a = 2*b-1;
     factor_posicion = b*h_medios/m;
     mediacinetica=0;
@@ -500,28 +508,34 @@ void verlet (double posicion, double momento, double nabla, double *t_estancia){
 
             //tiempo de estancia (izquierda)
             if(posicion < 0){
-                if(posicion_anterior > 0){
+                if((posicion_anterior > 0) && (t_estancia[0] != 0)){
                     l = l+1;
                 }
-                t_estancia[l] += 1;
+                t_estancia[l] += h;
             }
             posicion_anterior = posicion;
+            #ifdef ficheros
             fprintf(f,"%f ", (i+j)*h); //Esto es el tiempo
             fprintf(f,"%f ", posicion);
             fprintf(f,"%f ", momento);
+            #endif
 
             #ifdef doble_pozo
                 //ocupacion (normalizada) de la particula en el doble pozo, +1 para x>0 y -1 para x<0
                 if(posicion > 0){
                     contador_pos += 1;
+                    #ifdef ficheros
                     fprintf(g, "1 ");
                     fprintf(g, "%f\n", 1.0*contador_pos/pasos);
+                    #endif
                 }
 
                 if(posicion < 0){
                     contador_neg += 1;
+                    #ifdef ficheros
                     fprintf(g, "-1 ");
                     fprintf(g, "%f\n", 1.0*contador_neg/pasos);
+                    #endif
                 }
             #endif // doble_pozo
 
@@ -529,9 +543,11 @@ void verlet (double posicion, double momento, double nabla, double *t_estancia){
             #ifdef true
                 mediacinetica+=energia_cinetica(momento);
                 mediapotencial+=energia_potencial(posicion);
+                #ifdef ficheros
                 fprintf(f,"%f ", mediacinetica/(i+j+1));
                 fprintf(f,"%f ", mediapotencial/(i+j+1));
                 fprintf(f,"%f\n", (mediapotencial+mediacinetica)/(i+j+1));
+                #endif
 
                 /*fprintf(f,"%f ", energia_cinetica(momento));
                 fprintf(f,"%f\n", energia_potencial(posicion));*/
@@ -568,8 +584,10 @@ void verlet (double posicion, double momento, double nabla, double *t_estancia){
         #endif // true*/
 
     }
+    #ifdef ficheros
     fclose(f);
     fclose(g);
+    #endif
 }
 
 
