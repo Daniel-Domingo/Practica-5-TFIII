@@ -1,0 +1,36 @@
+set terminal pdf fontscale 2 size 50in, 25in
+set output "t_medio_frente_a_damping.pdf"  # Nombre del archivo PDF de salida
+
+#set terminal png size 2560, 1280 
+#set output "t_medio_frente_a_damping.png"  # Nombre del archivo PDF de salida
+
+set xrange [0:5.5]
+set title "Ajuste Lineal para t_{medio} vs. Damping"
+set xlabel "Damping"
+set ylabel "t_{medio}"
+
+set key left
+set key font ",20"
+set title font ",20"
+set xlabel font ",15"
+set ylabel font ",15"
+set key spacing 1.5 
+
+# Definir la función de ajuste lineal
+f(x) = a*x + b
+
+# Realizar el ajuste
+fit f(x) 't_medio_frente_a_damping.txt' using 1:2 via a, b
+
+ajuste_leyenda = sprintf("Ajuste lineal: y = %.2fx + %.2f", a, b)
+
+# Graficar los datos y el ajuste con puntos más grandes
+plot 't_medio_frente_a_damping.txt' using 1:2 with points pointtype 1 pointsize 5 linecolor rgb "purple" title "Datos", \
+     f(x) with lines title ajuste_leyenda
+
+
+
+
+#unset multiplot
+set output
+reset
