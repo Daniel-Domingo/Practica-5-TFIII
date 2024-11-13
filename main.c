@@ -27,7 +27,8 @@
 #define Intervalo 100 //Numero de intervalos en el histograma
 
 
-///Estos �ltimos son para los ifdef:
+
+///Estos ultimos son para los ifdef:
 
 //si se pone en "bucle" saca varios archivos de una para distintos h y nabla (en principio todos los que piden)
 //si se pone en "unico" saca un solo archivo para un dado h y nabla
@@ -92,17 +93,31 @@ unsigned char ind_ran, ig1, ig2, ig3;
 
 int main(){
 
-    //variables
+    //Variables necesarias siempre
     double /*coef de viscosidad*/nabla;
-    double /*Pto inicial en el espacio de fases*/ momento_inicial=0, posicion_inicial=0.00001, factor_bucle_nabla, tiempo_est_medio;
-    int i, j, pasos_nabla = 10, cuenta_saltos;
-    FILE *f;
+    double /*Pto inicial en el espacio de fases*/ momento_inicial=0, posicion_inicial=0.00001;
+
+
+    //Variables bucle
+    int i, j, pasos_nabla = 10;
+    double factor_bucle_nabla;
+
+
+    //variables ocupación
+    double tiempo_est_medio, T_aux = T;
+    int cuenta_saltos;
+
+
+
     // Inicializamos la rueda de n�meros random de Parisi-Rapuano
     ini_ran(123456789);
 
 
+
+
+
     ///EJECUTAMOS ALGORITMOS
-    //Este ejecuta los algoritmos para un �nico valor de nabla
+    //Este ejecuta los algoritmos para un unico valor de nabla
     #ifdef unico ///LA OPCIÓN DE ÚNICO AHORA MISMO NO FUNCIONA, no por nada, simplemente no la he arreglado
         nabla = 1;
 
@@ -147,41 +162,36 @@ int main(){
     #endif // unico
 
 
-    //Este bucle lo �nico que hace es que salgan varios archivos con distintos nabla de una, si se prefiere
+
+
+
+    //Este bucle solo sirve para que salgan varios archivos con distintos nabla de una, si se prefiere
     #ifdef bucle
+        FILE *f;
         f = fopen("t_medio_frente_a_damping.txt", "w");
         fprintf(f, "#nabla    #Tiempo de estancia medio\n");
 
+        //Lo raro no pasa por arriba
+        nabla = 0;
         for (i = 0; i < 2; i++){
-            nabla = 0;
             if (i == 0){
                 factor_bucle_nabla = 0.5;
-                pasos_nabla = 10;
+                pasos_nabla = 4;
             }
             else{
-                factor_bucle_nabla = 0.01;
-                pasos_nabla = 99;
+                factor_bucle_nabla = 0.1;
+                pasos_nabla = 10;
                 }
             for (j = 0; j < pasos_nabla; j++){
-                
-                
-                
-                ///APAÑO MALO, QUITAR LUEGO
-                if (j == 50)
-                    j++;
-                
-                
-                
                 nabla += factor_bucle_nabla;
 
-                //fprintf(f, "%f ", nabla);
 
 
                 ///Ejecutamos Verlet
                 verlet (posicion_inicial, momento_inicial, nabla, &cuenta_saltos);
 
 
-                tiempo_est_medio = T/(cuenta_saltos+1);
+                tiempo_est_medio = T_aux/(cuenta_saltos+1.0);
                 fprintf(f, "%f      %f\n", nabla, tiempo_est_medio);
 
 
@@ -427,11 +437,11 @@ void termino_estocastico_Z (double factor_estocastico, double *dos_terminos_esto
 
 
 void verlet (double posicion, double momento, double nabla, int *cuenta_saltos){
-    
+
     //Variables necesarias para ejecutar Verlet en cualquier caso
     int i, j, pasos;
     double factor_estocastico, dos_terminos_estocasticos[2], a, b, factor_posicion, fuerza_ahora, h_medios, Z;
-    
+
     //Calculamos las variables necesarias para Verlet en cualquier caso, que se mantendrán constantes durante el bucle
     pasos = (int)(T/h);
     factor_estocastico = sqrt(2*nabla*K_b_T*h);
@@ -439,21 +449,26 @@ void verlet (double posicion, double momento, double nabla, int *cuenta_saltos){
     b = 1/(1+nabla*h_medios/m);
     a = 2*b-1;
     factor_posicion = b*h_medios/m;
-    
-    
-    
+
+
+
     //Variables ocupación de cada estado
-    int contador_pos, contador_neg, t_estancia;
-    double posicion_anterior;
-    
+    unsigned int t_estancia, lado_actual;
+
     //Inicializamos las variables necesarias para la ocupación
-    contador_pos = 0;
-    contador_neg = 0;
-    posicion_anterior = posicion;
     t_estancia = 0;
-    
-    
-    
+    *cuenta_saltos = 0;
+    ///Lado actual depende de como se ponga el x inicial, 1 si x inicial positivo y 0 si es negativo
+    if (posicion > 0)
+        lado_actual = 1;
+    if (posicion < 0)
+        lado_actual = 0;
+    if (posicion == 0){
+        printf("La posicion inicial no puede ser 0");
+        return;
+    }
+
+
     //Variables calcular energías promedio
     #ifdef energia
         double mediapotencial,mediacinetica;
@@ -461,72 +476,85 @@ void verlet (double posicion, double momento, double nabla, int *cuenta_saltos){
         mediapotencial=0;
     #endif // energia
 
-    
-    
-    
-    
-    
+
+
+
+
+
 /*
 He cambiado el nombre de los archivos de salida
-Como vamos a estar usando siempre Verlet y h=0.001 (igual la cambiamos pero en ese caso sería siempre esa) no tiene sentido ponerlo en el nombre del archivo. 
+Como vamos a estar usando siempre Verlet y h=0.001 (igual la cambiamos pero en ese caso sería siempre esa) no tiene sentido ponerlo en el nombre del archivo.
 Lo que si tiene más sentido es poner A que vamos a tener que cambiarlo y T que hubiera tenido sentido ponerlo desde el pozo simple xd.
-nabla/eta se queda como estaba. 
+nabla/eta se queda como estaba.
 Ahora los archivos de posicion/momento/energías se llaman "Doble_pozo_(...)"; los de tiempo en cada estado "Ocupacion_(...)".
-*/    
-    
+*/
+
     //Toda la parafernalia de los char es para poder sacar todos los archivos de distintas A y nabla en un solo bucle
-    char nombre_archivo[1023]="Doble_pozo_A=", nombre_ocupacion[1023]="Ocupacion_A=", especificador_A[50], especificador_nabla[50], especificador_T[50], nombre_archivo_parte2[]="_nabla=", nombre_archivo_parte3[]="_T=", nombre_archivo_fin[]=".txt";
+    char nombre_ocupacion[1023]="Ocupacion_A=", especificador_A[50], especificador_nabla[50], especificador_T[50], nombre_archivo_parte2[]="_nabla=", nombre_archivo_parte3[]="_T=", nombre_archivo_fin[]=".txt";
+    int T_aux = T*1;
     sprintf(especificador_A, "%f", A);
     sprintf(especificador_nabla, "%f", nabla);
-    sprintf(especificador_T, "%d", T);
-    
-    strncat(nombre_archivo, especificador_A, 1024);
-    strncat(nombre_archivo, nombre_archivo_parte2, 1024);
-    strncat(nombre_archivo, especificador_nabla, 1024);
-    strncat(nombre_archivo, nombre_archivo_parte3, 1024);
-    strncat(nombre_archivo, especificador_T, 1024);
-    strncat(nombre_archivo, nombre_archivo_fin, 1024);
+    sprintf(especificador_T, "%d", T_aux);
+
 
     strncat(nombre_ocupacion, especificador_A, 1024);
     strncat(nombre_ocupacion, nombre_archivo_parte2, 1024);
     strncat(nombre_ocupacion, especificador_nabla, 1024);
-    strncat(nombre_archivo, nombre_archivo_parte3, 1024);
-    strncat(nombre_archivo, especificador_T, 1024);
+    strncat(nombre_ocupacion, nombre_archivo_parte3, 1024);
+    strncat(nombre_ocupacion, especificador_T, 1024);
     strncat(nombre_ocupacion, nombre_archivo_fin, 1024);
 
-    
+
     //Archivo ocupación de cada estado
     FILE *g;
     g = fopen(nombre_ocupacion, "w");
-    
-    
+
+
     //Archivo trayectorias y/o energías
     #ifdef esp_de_fases
+        char nombre_archivo[1023]="Doble_pozo_A=";
+
+        strncat(nombre_archivo, especificador_A, 1024);
+        strncat(nombre_archivo, nombre_archivo_parte2, 1024);
+        strncat(nombre_archivo, especificador_nabla, 1024);
+        strncat(nombre_archivo, nombre_archivo_parte3, 1024);
+        strncat(nombre_archivo, especificador_T, 1024);
+        strncat(nombre_archivo, nombre_archivo_fin, 1024);
+
         FILE *f;
         f = fopen(nombre_ocupacion, "w");
+
+        int pasos_no_representados, cada_cuantos_pasos_representamos;
+        cada_cuantos_pasos_representamos = 50; //Representamos uno de (cada_cuantos_pasos_representamos) pasos
+        pasos_no_representados = 0; //Contador de los pasos a representar
     #else
         #ifdef energia
+            char nombre_archivo[1023]="Doble_pozo_A=";
+
+            strncat(nombre_archivo, especificador_A, 1024);
+            strncat(nombre_archivo, nombre_archivo_parte2, 1024);
+            strncat(nombre_archivo, especificador_nabla, 1024);
+            strncat(nombre_archivo, nombre_archivo_parte3, 1024);
+            strncat(nombre_archivo, especificador_T, 1024);
+            strncat(nombre_archivo, nombre_archivo_fin, 1024);
+
             FILE *f;
             f = fopen(nombre_ocupacion, "w");
+
+
+            int pasos_no_representados, cada_cuantos_pasos_representamos;
+            cada_cuantos_pasos_representamos = 50; //Representamos uno de (cada_cuantos_pasos_representamos) pasos
+            pasos_no_representados = 0; //Contador de los pasos a representar
         #endif
     #endif // esp_de_fases
-    
-    
 
 
 
 
-    unsigned int control_t_estancia_columna;
-    control_t_estancia_columna = 0;
-
-    *cuenta_saltos = 0;
 
 
-    int pasos_no_representados, cada_cuantos_pasos_representamos;
-    cada_cuantos_pasos_representamos = 50; //Representamos uno de (cada_cuantos_pasos_representamos) pasos
-    pasos_no_representados = 0; //Contador de los pasos a representar
 
-
+    ///Empieza el bucle con los pasos del algoritmo
     for (i = 0 ; i < pasos; i += 2){
 
         termino_estocastico_Z(factor_estocastico, dos_terminos_estocasticos);
@@ -538,36 +566,43 @@ Ahora los archivos de posicion/momento/energías se llaman "Doble_pozo_(...)"; l
 
             posicion += factor_posicion*(2*momento+h*fuerza_ahora+Z);
             momento = a*momento+h_medios*(a*fuerza_ahora+fuerza(posicion))+b*Z ;
-            
+
             ///El algoritmo en si es hasta aquí, ahora cálculos
-            
-            
 
 
 
             //tiempo de estancia; como posicion_inicial > 0, la primera columna es el tiempo a la derecha (en x positivo)
-            if(posicion*posicion_anterior > 0){
-                t_estancia++;
-            }
-            if(posicion*posicion_anterior < 0){
-                fprintf(g, "%f        ", t_estancia*h);
-                t_estancia = 0;
-                (*cuenta_saltos)++;
-                control_t_estancia_columna++;
-                if (control_t_estancia_columna == 2){
-                    fprintf(g, "\n");
-                    control_t_estancia_columna = 0;
+            //Para que salga bien hay que eliminar las posiciones cercanas a 0
+            if (lado_actual == 1){
+                if(posicion < -0.2){
+                    lado_actual = 0;
+                    (*cuenta_saltos)++;
+
+                    fprintf(g, "%f ", t_estancia*h);
+                    t_estancia = 0;
                 }
+                else
+                    t_estancia++;
+            }
+
+            else{
+                if(posicion > 0.2){
+                    lado_actual = 1;
+
+                    fprintf(g, "%f ", t_estancia*h);
+                    t_estancia = 0;
+
+                    (*cuenta_saltos)++;
+
+                    fprintf(g, "\n");
+                }
+                else
+                    t_estancia++;
             }
 
 
-            posicion_anterior = posicion;
 
 
-
-
-
-            pasos_no_representados += 1;
 
             #ifdef esp_de_fases
                 if (pasos_no_representados == cada_cuantos_pasos_representamos){
@@ -577,26 +612,10 @@ Ahora los archivos de posicion/momento/energías se llaman "Doble_pozo_(...)"; l
                 }
             #endif // esp_de_fases
 
+
+
+
             //Esto es necesario para representar la energía y el espacio de fases a la vez
-
-            
-            
-            
-            
-            ///Yo creo que esto ya no hace falta pero por si acaso lo dejo
-            /*
-            #ifdef doble_pozo
-                //ocupacion (normalizada) de la particula en el doble pozo, +1 para x>0 y -1 para x<0
-                if(posicion > 0)
-                    contador_pos += 1;
-                if(posicion < 0)
-                    contador_neg += 1;
-            #endif // doble_pozo
-            */
-            
-            
-            
-
             #ifdef energia
                 mediacinetica += energia_cinetica(momento);
                 mediapotencial += energia_potencial(posicion);
@@ -612,14 +631,16 @@ Ahora los archivos de posicion/momento/energías se llaman "Doble_pozo_(...)"; l
                     fprintf(f,"%f ", mediapotencial/(i+j+1));
                     fprintf(f,"%f\n", (mediapotencial+mediacinetica)/(i+j+1));
                 }
-
+                pasos_no_representados ++;
             #else
-                if (pasos_no_representados == cada_cuantos_pasos_representamos)
-                    fprintf(f,"\n");
-
-                if (pasos_no_representados == cada_cuantos_pasos_representamos)
-                    pasos_no_representados = 0;
-            #endif // energia
+                #ifdef esp_de_fases
+                    if (pasos_no_representados == cada_cuantos_pasos_representamos){
+                        fprintf(f,"\n");
+                        pasos_no_representados = 0;
+                    }
+                    pasos_no_representados ++;
+                #endif
+            #endif // esp_de_fases
 
 
         }
@@ -642,13 +663,13 @@ Ahora los archivos de posicion/momento/energías se llaman "Doble_pozo_(...)"; l
         }
         #endif // true
 
-        
-        
+
+
 
     //Cerramos el archivo de ocupación
     fclose(g);
-    
-    
+
+
     //Cerramos el archivo de trayectorias y/o energias
         //Archivo trayectorias y/o energías
     #ifdef esp_de_fases
