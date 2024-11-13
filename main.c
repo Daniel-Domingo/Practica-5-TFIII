@@ -159,9 +159,18 @@ int main(){
             }
             else{
                 factor_bucle_nabla = 0.01;
-                pasos_nabla = 49;
+                pasos_nabla = 99;
                 }
             for (j = 0; j < pasos_nabla; j++){
+                
+                
+                
+                ///APAÑO MALO, QUITAR LUEGO
+                if (j == 50)
+                    j++;
+                
+                
+                
                 nabla += factor_bucle_nabla;
 
                 //fprintf(f, "%f ", nabla);
@@ -412,29 +421,41 @@ void termino_estocastico_Z (double factor_estocastico, double *dos_terminos_esto
 
 void verlet (double posicion, double momento, double nabla, int *cuenta_saltos){
     int i, j, pasos, contador_pos, contador_neg, t_estancia;
+    double factor_estocastico, dos_terminos_estocasticos[2], a, b, factor_posicion, fuerza_ahora, h_medios, Z, posicion_anterior;
 
+    
     #ifdef energia
         double mediapotencial,mediacinetica;
         mediacinetica=0;
         mediapotencial=0;
     #endif // energia
 
-    //Uso la notaci�n del power point de clase, las barras bajas se deben entender como "sub", p.ej f sub x1
-    double factor_estocastico, dos_terminos_estocasticos[2], a, b, factor_posicion, fuerza_ahora, h_medios, Z, posicion_anterior;
-
+/*
+He cambiado el nombre de los archivos de salida
+Como vamos a estar usando siempre Verlet y h=0.001 (igual la cambiamos pero en ese caso sería siempre esa) no tiene sentido ponerlo en el nombre del archivo. 
+Lo que si tiene más sentido es poner A que vamos a tener que cambiarlo y T que hubiera tenido sentido ponerlo desde el pozo simple xd.
+nabla/eta se queda como estaba. 
+Ahora los archivos de posicion/momento/energías se llaman "Doble_pozo_(...)"; los de tiempo en cada estado "Ocupacion_(...)".
+*/
 
     //Toda la parafernalia de los char es para poder sacar todos los archivos de distintas h y nabla en un solo bucle
-    char nombre_archivo[1023]="Verlet_h=", nombre_ocupacion[1023]="Ocupacion_Verlet_h=", especificador_h[50], especificador_nabla[50], nombre_archivo_parte2[]="_nabla=", nombre_archivo_fin[]=".txt";
-    sprintf(especificador_h, "%f", h);
-    strncat(nombre_archivo, especificador_h, 1024);
+    char nombre_archivo[1023]="Doble_pozo_A=", nombre_ocupacion[1023]="Ocupacion_A=", especificador_A[50], especificador_nabla[50], especificador_T[50], nombre_archivo_parte2[]="_nabla=", nombre_archivo_parte3[]="_T=", nombre_archivo_fin[]=".txt";
+    sprintf(especificador_A, "%f", A);
     sprintf(especificador_nabla, "%f", nabla);
+    sprintf(especificador_T, "%d", T);
+    
+    strncat(nombre_archivo, especificador_A, 1024);
     strncat(nombre_archivo, nombre_archivo_parte2, 1024);
     strncat(nombre_archivo, especificador_nabla, 1024);
+    strncat(nombre_archivo, nombre_archivo_parte3, 1024);
+    strncat(nombre_archivo, especificador_T, 1024);
     strncat(nombre_archivo, nombre_archivo_fin, 1024);
 
-    strncat(nombre_ocupacion, especificador_h, 1024);
+    strncat(nombre_ocupacion, especificador_A, 1024);
     strncat(nombre_ocupacion, nombre_archivo_parte2, 1024);
     strncat(nombre_ocupacion, especificador_nabla, 1024);
+    strncat(nombre_archivo, nombre_archivo_parte3, 1024);
+    strncat(nombre_archivo, especificador_T, 1024);
     strncat(nombre_ocupacion, nombre_archivo_fin, 1024);
 
 
