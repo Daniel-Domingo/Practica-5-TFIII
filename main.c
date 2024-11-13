@@ -2,7 +2,7 @@
        /// -----Segunda parte: DOBLE POZO----- ///
 
 
-//actualizado el 11-11-24
+//actualizado el 13-11-24
 
 
 
@@ -52,17 +52,18 @@ void ini_ran(int SEMILLA);
 double Random(void);
 void num_aleatorio_gaussiano (double *dos_numeros_gaussianos);
 
+//Histogramas, en principio su funcion es la misma, se que son distintas pero no se exactamente en que
 void Histograma(int a, int b, int N, int divisiones,  double *array);
+void histograma (double *V/*matriz de entrada*/, double *histograma_matriz /*matriz de salida*/);
 
 //Numeros aleatorios gaussianos
 void generador_vector_gaussiano (/*vector de salida*/ double *t_estancia);
-void histograma (double *V/*matriz de entrada*/, double *histograma_matriz /*matriz de salida*/);
 
 //Ecuaciones oscilador
 double fuerza (double posicion);
 void termino_estocastico_Z (double factor_estocastico, double *dos_terminos_estocasticos);
 
-//Algoritmos
+//Algoritmo
 void verlet (double posicion, double momento, double nabla, int *cuenta_saltos);
 
 //Datos para medir
@@ -199,6 +200,67 @@ int main(){
 }
 
 
+
+
+
+
+
+
+//Parisi-Rapuano
+//Esta funciones las guardo de cuando fisica computacional, ahora solo Dios sabe como chuchas funciona esta cosa
+void ini_ran(int SEMILLA){
+    int INI, FACTOR, SUM, i;
+    srand(SEMILLA);
+    INI = SEMILLA;
+    FACTOR = 67397;
+    SUM = 7364893;
+    for (i = 0; i < 256; i++)
+    {
+        INI = (INI * FACTOR + SUM);
+        irr[i] = INI;
+    }
+    ind_ran = ig1 = ig2 = ig3 = 0;
+}
+
+double Random(void){
+    double r;
+    ig1 = ind_ran - 24;
+    ig2 = ind_ran - 55;
+    ig3 = ind_ran - 61;
+    irr[ind_ran] = irr[ig1] + irr[ig2];
+    ir1 = (irr[ind_ran] ^ irr[ig3]);
+    ind_ran++;
+    r = ir1 * NormRANu;
+    // printf("r=%f\n",r);
+    return r;
+}
+
+
+
+
+//Genera un n�mero aleatorio con distribuci�n gaussiana, a partir de un numero random en el intervalo [0,1)
+void num_aleatorio_gaussiano (double *dos_numeros_gaussianos){
+    double aleatorio_uniforme_1, aleatorio_uniforme_2, auxiliar_1, auxiliar_2;
+
+    ///Aqu� hay un problema con el algoritmo: Cuando sale aleatorio_uniforme_1 = 0 ---> ln(0)=-inf; y da error
+    //No se como se supone que deber�amos arreglarlo, de momento solo voy a poner una cl�usula de que no sea igual a cero
+    aleatorio_uniforme_1=Random ();
+    while (aleatorio_uniforme_1 == 0.0)
+        aleatorio_uniforme_1=Random ();
+    aleatorio_uniforme_2=Random ();
+
+    auxiliar_1=sqrt(-2*log(aleatorio_uniforme_1));
+    auxiliar_2=2*PI*aleatorio_uniforme_2;
+
+    //en la presentaci�n dan como dos posibilidades, seg�n las pruebas que he hecho es indistinto usar una u otra
+    dos_numeros_gaussianos[0]= auxiliar_1*cos(auxiliar_2);
+
+    //Esta ser�a la segunda forma, solo cambia el cos por el sen
+    dos_numeros_gaussianos[1] = auxiliar_1*sin(auxiliar_2);
+}
+
+
+
 //Esta es la funcion histograma que use en compu. Creo que la normalizacion esta mal, pero por lo demas parece funcionar
 void Histograma(int a, int b, int N, int divisiones,  double *array)
 {
@@ -265,61 +327,6 @@ double Random_C (){
     srand(seed);
     */
 }
-
-
-//Parisi-Rapuano
-//Esta funciones las guardo de cuando fisica computacional, ahora solo Dios sabe como chuchas funciona esta cosa
-void ini_ran(int SEMILLA){
-    int INI, FACTOR, SUM, i;
-    srand(SEMILLA);
-    INI = SEMILLA;
-    FACTOR = 67397;
-    SUM = 7364893;
-    for (i = 0; i < 256; i++)
-    {
-        INI = (INI * FACTOR + SUM);
-        irr[i] = INI;
-    }
-    ind_ran = ig1 = ig2 = ig3 = 0;
-}
-
-double Random(void){
-    double r;
-    ig1 = ind_ran - 24;
-    ig2 = ind_ran - 55;
-    ig3 = ind_ran - 61;
-    irr[ind_ran] = irr[ig1] + irr[ig2];
-    ir1 = (irr[ind_ran] ^ irr[ig3]);
-    ind_ran++;
-    r = ir1 * NormRANu;
-    // printf("r=%f\n",r);
-    return r;
-}
-
-
-
-
-//Genera un n�mero aleatorio con distribuci�n gaussiana, a partir de un numero random en el intervalo [0,1)
-void num_aleatorio_gaussiano (double *dos_numeros_gaussianos){
-    double aleatorio_uniforme_1, aleatorio_uniforme_2, auxiliar_1, auxiliar_2;
-
-    ///Aqu� hay un problema con el algoritmo: Cuando sale aleatorio_uniforme_1 = 0 ---> ln(0)=-inf; y da error
-    //No se como se supone que deber�amos arreglarlo, de momento solo voy a poner una cl�usula de que no sea igual a cero
-    aleatorio_uniforme_1=Random ();
-    while (aleatorio_uniforme_1 == 0.0)
-        aleatorio_uniforme_1=Random ();
-    aleatorio_uniforme_2=Random ();
-
-    auxiliar_1=sqrt(-2*log(aleatorio_uniforme_1));
-    auxiliar_2=2*PI*aleatorio_uniforme_2;
-
-    //en la presentaci�n dan como dos posibilidades, seg�n las pruebas que he hecho es indistinto usar una u otra
-    dos_numeros_gaussianos[0]= auxiliar_1*cos(auxiliar_2);
-
-    //Esta ser�a la segunda forma, solo cambia el cos por el sen
-    dos_numeros_gaussianos[1] = auxiliar_1*sin(auxiliar_2);
-}
-
 
 
 
@@ -420,25 +427,54 @@ void termino_estocastico_Z (double factor_estocastico, double *dos_terminos_esto
 
 
 void verlet (double posicion, double momento, double nabla, int *cuenta_saltos){
-    int i, j, pasos, contador_pos, contador_neg, t_estancia;
-    double factor_estocastico, dos_terminos_estocasticos[2], a, b, factor_posicion, fuerza_ahora, h_medios, Z, posicion_anterior;
-
     
+    //Variables necesarias para ejecutar Verlet en cualquier caso
+    int i, j, pasos;
+    double factor_estocastico, dos_terminos_estocasticos[2], a, b, factor_posicion, fuerza_ahora, h_medios, Z;
+    
+    //Calculamos las variables necesarias para Verlet en cualquier caso, que se mantendrán constantes durante el bucle
+    pasos = (int)(T/h);
+    factor_estocastico = sqrt(2*nabla*K_b_T*h);
+    h_medios = h/2;
+    b = 1/(1+nabla*h_medios/m);
+    a = 2*b-1;
+    factor_posicion = b*h_medios/m;
+    
+    
+    
+    //Variables ocupación de cada estado
+    int contador_pos, contador_neg, t_estancia;
+    double posicion_anterior;
+    
+    //Inicializamos las variables necesarias para la ocupación
+    contador_pos = 0;
+    contador_neg = 0;
+    posicion_anterior = posicion;
+    t_estancia = 0;
+    
+    
+    
+    //Variables calcular energías promedio
     #ifdef energia
         double mediapotencial,mediacinetica;
         mediacinetica=0;
         mediapotencial=0;
     #endif // energia
 
+    
+    
+    
+    
+    
 /*
 He cambiado el nombre de los archivos de salida
 Como vamos a estar usando siempre Verlet y h=0.001 (igual la cambiamos pero en ese caso sería siempre esa) no tiene sentido ponerlo en el nombre del archivo. 
 Lo que si tiene más sentido es poner A que vamos a tener que cambiarlo y T que hubiera tenido sentido ponerlo desde el pozo simple xd.
 nabla/eta se queda como estaba. 
 Ahora los archivos de posicion/momento/energías se llaman "Doble_pozo_(...)"; los de tiempo en cada estado "Ocupacion_(...)".
-*/
-
-    //Toda la parafernalia de los char es para poder sacar todos los archivos de distintas h y nabla en un solo bucle
+*/    
+    
+    //Toda la parafernalia de los char es para poder sacar todos los archivos de distintas A y nabla en un solo bucle
     char nombre_archivo[1023]="Doble_pozo_A=", nombre_ocupacion[1023]="Ocupacion_A=", especificador_A[50], especificador_nabla[50], especificador_T[50], nombre_archivo_parte2[]="_nabla=", nombre_archivo_parte3[]="_T=", nombre_archivo_fin[]=".txt";
     sprintf(especificador_A, "%f", A);
     sprintf(especificador_nabla, "%f", nabla);
@@ -458,24 +494,27 @@ Ahora los archivos de posicion/momento/energías se llaman "Doble_pozo_(...)"; l
     strncat(nombre_archivo, especificador_T, 1024);
     strncat(nombre_ocupacion, nombre_archivo_fin, 1024);
 
-
-    FILE *f, *g;
-    f = fopen(nombre_archivo, "w");
+    
+    //Archivo ocupación de cada estado
+    FILE *g;
     g = fopen(nombre_ocupacion, "w");
+    
+    
+    //Archivo trayectorias y/o energías
+    #ifdef esp_de_fases
+        FILE *f;
+        f = fopen(nombre_ocupacion, "w");
+    #else
+        #ifdef energia
+            FILE *f;
+            f = fopen(nombre_ocupacion, "w");
+        #endif
+    #endif // esp_de_fases
+    
+    
 
 
-    pasos = (int)(T/h);
-    factor_estocastico = sqrt(2*nabla*K_b_T*h);
-    h_medios = h/2;
-    b = 1/(1+nabla*h_medios/m);
-    a = 2*b-1;
-    factor_posicion = b*h_medios/m;
 
-
-    contador_pos = 0;
-    contador_neg = 0;
-    posicion_anterior = posicion;
-    t_estancia = 0;
 
     unsigned int control_t_estancia_columna;
     control_t_estancia_columna = 0;
@@ -499,7 +538,10 @@ Ahora los archivos de posicion/momento/energías se llaman "Doble_pozo_(...)"; l
 
             posicion += factor_posicion*(2*momento+h*fuerza_ahora+Z);
             momento = a*momento+h_medios*(a*fuerza_ahora+fuerza(posicion))+b*Z ;
-
+            
+            ///El algoritmo en si es hasta aquí, ahora cálculos
+            
+            
 
 
 
@@ -525,10 +567,7 @@ Ahora los archivos de posicion/momento/energías se llaman "Doble_pozo_(...)"; l
 
 
 
-
-
             pasos_no_representados += 1;
-
 
             #ifdef esp_de_fases
                 if (pasos_no_representados == cada_cuantos_pasos_representamos){
@@ -540,7 +579,12 @@ Ahora los archivos de posicion/momento/energías se llaman "Doble_pozo_(...)"; l
 
             //Esto es necesario para representar la energía y el espacio de fases a la vez
 
-
+            
+            
+            
+            
+            ///Yo creo que esto ya no hace falta pero por si acaso lo dejo
+            /*
             #ifdef doble_pozo
                 //ocupacion (normalizada) de la particula en el doble pozo, +1 para x>0 y -1 para x<0
                 if(posicion > 0)
@@ -548,7 +592,10 @@ Ahora los archivos de posicion/momento/energías se llaman "Doble_pozo_(...)"; l
                 if(posicion < 0)
                     contador_neg += 1;
             #endif // doble_pozo
-
+            */
+            
+            
+            
 
             #ifdef energia
                 mediacinetica += energia_cinetica(momento);
@@ -595,10 +642,22 @@ Ahora los archivos de posicion/momento/energías se llaman "Doble_pozo_(...)"; l
         }
         #endif // true
 
+        
+        
 
-
+    //Cerramos el archivo de ocupación
     fclose(g);
-    fclose(f);
+    
+    
+    //Cerramos el archivo de trayectorias y/o energias
+        //Archivo trayectorias y/o energías
+    #ifdef esp_de_fases
+        fclose(f);
+    #else
+        #ifdef energia
+            fclose(f);
+        #endif
+    #endif // esp_de_fases
 }
 
 
