@@ -2,7 +2,7 @@
        /// -----Tercera parte: POLIMERO----- ///
 
 
-//actualizado el 21-11-24
+//actualizado el 23-11-24
 
 
 ///DUDAS:
