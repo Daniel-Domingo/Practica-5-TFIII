@@ -1,6 +1,12 @@
-///     -------Practica 5 TF3, sim molecular------      ///
+///     -------Practica 5 TFIII, Sim molecular------      ///
+       /// -----Tercera parte: POLIMERO----- ///
 
 
+//actualizado el 23-11-24
+
+
+///DUDAS:
+//valor de nabla?
 
 
 
@@ -9,60 +15,42 @@
 #include <math.h>
 #include <string.h>
 
-#define m 1     //masa
-#define k 1     //cte elástica
+
+
+
+
+#define m 1     //Ahora es la masa de un monÃ³mero
 #define K_b_T 1 //cte de Boltzmann por temperatura
 #define PI 3.14159265358979323846
+
 
 //para los numerros random, NO TOCAR
 #define NormRANu (2.3283063671E-10F)
 
-#define T 500 //Tiempo en cualquier algoritmo
-//El numero de pasos vendrá dado por T/h, así pasa el mismo tiempo independientemente de h
+#define T 500000 //Tiempo en cualquier algoritmo
+#define h 0.001  //Paso de tiempo
+#define nabla 1
 
-#define Ng 10000 //Numero de datos gaussianos que se quieren, es solo para comprobaciones, SIEMPRE PAR
-#define Intervalo 100 //Numero de intervalos en el histograma
+#define Intervalo 100 //Numero de intervalos (cajitas) en el histograma
 
+//No se si nos harÃ¡ falta, pero igual para comprobar es bueno empezar en 2D, de momento lo dejo en 3D:
+#define dim 3
 
-///Estos últimos son para los ifdef:
-
-//si se pone en "bucle" saca varios archivos de una para distintos h y nabla (en principio todos los que piden)
-//si se pone en "unico" saca un solo archivo para un dado h y nabla
-#define unico //bucle
-
-
-//Calcular las energías durante el proceso, si (true) o no (false)
-#define true
+//Los archivos no pueden contener todos los pasos, si no mi ordenador y gnuplot explotan, por eso escribimos aquÃ­ un quiero uno de cada cuantos pasos:
+#define pasos_representar T //AsÃ­ pues, si ponemos T = 10000, h = 0.001, hay 10000000 pasos, pero solo estamos guardando uno de cada 1000, es decir, 10000
 
 
+///Datos nuevos para esta parte:
+#define k_e 100 //Cte elÃ¡stica, una cte multiplicativa al potencial
+#define b 1 //Dist de equilibrio entre los muelles, en el doble pozo tenÃ­amos (x^2-1)^2, pues ahora serÃ¡ (x^2-b)^2
 
 
 
-//Numeros aleatorios uniformes
-double Random_C();
-void ini_ran(int SEMILLA);
-double Random(void);
-void num_aleatorio_gaussiano (double *dos_numeros_gaussianos);
+//Numero de monomeros en la cadena, luego se puede poner con un #define, a partir del punto vii
+int N = 2;
+//#define N 16
 
-//Numeros aleatorios gaussianos
-void generador_vector_gaussiano (/*vector de salida*/ double *vector_numeros_gaussianos);
-void histograma (double *V/*matriz de entrada*/, double *histograma_matriz /*matriz de salida*/);
 
-//Ecuaciones oscilador
-double fuerza (double posicion);
-double damping (double momento, double nabla_dividido_m);
-double g_xn_pn (double posicion, double momento, double nabla_dividido_m);
-double f_pn (double momento);
-void termino_estocastico_Z (double factor_estocastico, double *dos_terminos_estocasticos);
-
-//Algoritmos
-void Euler_Maruyama (double posicion, double momento, double h, double nabla);
-void Runge_Kutta (double posicion, double momento, double h, double nabla);
-void verlet (double posicion, double momento, double h, double nabla);
-
-//Datos para medir
-double energia_cinetica (double momento);
-double energia_potencial(double posicion);
 
 
 
@@ -75,6 +63,63 @@ unsigned char ind_ran, ig1, ig2, ig3;
 
 
 
+//Estos ultimos son para los ifdef:
+//De momento ninguno xd
+
+
+
+
+///PredeclaraciÃ³n de funciones
+//Numeros aleatorios uniformes
+void ini_ran(int SEMILLA);
+double Random(void);
+void num_aleatorio_gaussiano (double *dos_numeros_gaussianos);
+
+
+//Histogramas, en principio su funcion es la misma, se que son distintas pero no se exactamente en que
+void histograma (double *V/*matriz de entrada*/,int num_elementos, const char *nombre_archivo);
+
+///Calcular distancias
+void distancias(double **posiciones, double **diferencia_de_posiciones, double *modulo_distancias);
+
+//Ecuaciones oscilador
+void termino_estocastico_Z (double factor_estocastico, double *dos_terminos_estocasticos);
+void sacar_array_numeros_Z(double **array_Z_aux, double factor_estocastico);
+
+void funcion_fuerzas(double **fuerzas, double **diferencia_de_posiciones, double *modulo_distancias);
+
+
+//Algoritmo
+void paso_verlet_posiciones(double **posiciones, double **momentos, double **fuerza_old, double **array_Z_aux, double factor_posicion);
+void paso_verlet_momentos(double **momentos, double **fuerza, double **fuerza_old, double **array_Z_aux, double a, double b_verlet, double h_medios);
+void verlet (double **posiciones, double **momentos);
+
+
+//Datos para medir
+double energia_cinetica_cadena (double **momentos);
+double energia_potencial_cadena (double *modulo_distancias);
+double energia_cinetica_monomero_1D (double momento);
+double energia_potencial_monomero_1D (double distancia);
+
+double distancia_extremo_extremo(double **posiciones, double *vector_estremo_estremo);
+double cacular_radio_de_giro(double **posiciones, double *CDM);
+
+
+//Cosas auxiliares
+void config_inicial_polimero(double **posiciones, double **momentos);
+void calcular_CDM_y_momentum(double **posiciones, double **momentos, double *CDM, double *momentum_CDM);
+void posiciones_respecto_al_CDM(double **posiciones, double **momentos, double *CDM, double *momentum_CDM);
+
+
+
+
+
+//Y volvemos a meter #ifdefs, esta vez no se va a descontrolar tanto como en el doble pozo xd
+//#define energia
+
+#define radio_de_giro
+
+//#define dist_extremo_extremo
 
 
 
@@ -82,63 +127,59 @@ unsigned char ind_ran, ig1, ig2, ig3;
 
 
 
-/// -----Primera parte: OSCILADOR ARMÓNICO----- ///
+
+///     --------MAIN--------       ///
 int main(){
+    int i;
 
-    //variables
-    double /*coef de viscosidad*/nabla, /*paso de tiempo*/h;
-    double /*Pto inicial en el espacio de fases*/ momento_inicial=0, posision_inicial=0;
-
-
-
-    // Inicializamos la rueda de números random de Parisi-Rapuano
-    ini_ran(123456789);
+    // Inicializamos la rueda de n meros random de Parisi-Rapuano
+    ini_ran(time(NULL));
 
 
-
-    ///EJECUTAMOS ALGORITMOS
-    //Este ejecuta los algoritmos para un único valor de h y nabla
-    #ifdef unico
-        h = 0.001;
-        nabla = 10;
-        Euler_Maruyama(posision_inicial, momento_inicial, h, nabla);
-        Runge_Kutta (posision_inicial, momento_inicial, h, nabla);
-        verlet (posision_inicial, momento_inicial, h, nabla);
-    #endif // unico
-
-    //Este bucle lo único que hace es que salgan varios archivos con distintos h y nabla de una, si se prefiere
-    #ifdef bucle
-        int i, j;
-        h = 0.00001;
-        for (i = 0; i < 4; i++){
-            h = h*10;
-            nabla = 0.01;
-            for (j = 0; j < 3; j++){
-                nabla = nabla*10;
-                Euler_Maruyama(posision_inicial, momento_inicial, h, nabla);
-                Runge_Kutta (posision_inicial, momento_inicial, h, nabla);
-                verlet (posision_inicial, momento_inicial, h, nabla);
-            }
-        }
-    #endif // bucle
-
-
-    ///Comprobacion de que la distribucion de posiciones y velocidades sea gaussiana
-    //histograma()
-
-
-
-
-    //aqui ejecuto las funciones que sacan los numeros gaussianos aleatorios
-    //son solo de comprobación así que para ejecutar el programa de forma normal no se deben activar
+    ///A partir de aquÃ­ el valor de N va a ser variable. No tabulo porque luego se mantendrÃ¡ fijo y me da mucho palo tener que cambiarlo
+    //Si no ha cambiado, N es variable global inicializada en 2. Si solo se quiere una N pues poner algo como: for (N = 4; N < 5; N *= 2)
+    for (N = 16; N < 65; N *= 2){
+    ///Arrays de las coordenadas generalizadas
     /*
-    double vector_numeros_gaussianos[N], histograma_matriz[Intervalo];
-    generador_vector_gaussiano(vector_numeros_gaussianos);
-    histograma(vector_numeros_gaussianos, histograma_matriz);
+    En esta parte, vamos a tener N partÃ­culas con 3 posiciones, momentos cada una; 6N variables.
+    Se podrÃ­a hacer todo en un solo array, pero para no hacer un lio con los indices vamos a hacer 2 arrays de 2 indices, p. ej: posiciones[N][3]
+    El primer indice nos indica a que monomero de la cadena nos referimos y el segundo la posicion en los ejes x,y,z que identificamos con 0,1,2.
     */
+    double **posiciones = malloc(N * sizeof(double *));
+    for (i = 0; i < N; i++)
+        posiciones[i] = malloc(dim * sizeof(double));
 
-    return 0;
+    double **momentos = malloc(N * sizeof(double *));
+    for (i = 0; i < N; i++)
+        momentos[i] = malloc(dim * sizeof(double));
+
+    //Y les damos una configuracion inicial
+    config_inicial_polimero(posiciones, momentos);
+
+
+
+
+    ///Ejecutamos Verlet y sacamos absolutamente todo
+    verlet (posiciones, momentos);
+
+
+
+
+
+    //Liberamos memoria
+    for (i = 0; i < N; i++)
+        free(posiciones[i]);
+    free(posiciones);
+
+    for (i = 0; i < N; i++)
+        free(momentos[i]);
+    free(momentos);
+
+
+    printf("Completado N = %d", N);
+    }    //Fin del bucle en N
 }
+///     ------FIN DEL MAIN------     ///
 
 
 
@@ -149,25 +190,7 @@ int main(){
 
 
 
-
-///Números aleatorios
-
-//Generador de C de numeros random
-//Mejor utilizar un Parisi-Rapuano
-double Random_C (){
-    double random;
-    random=(rand()/((double)RAND_MAX+1));
-    return random;
-
-    //Inicializacion de numeros aleatorios de C, en principio no se usan
-    //si se quieren usar COPIAR EN EL MAIN
-    /*
-    int seed=12131;
-    srand(seed);
-    */
-}
-
-
+///NÃºmeros aleatorios
 //Parisi-Rapuano
 //Esta funciones las guardo de cuando fisica computacional, ahora solo Dios sabe como chuchas funciona esta cosa
 void ini_ran(int SEMILLA){
@@ -199,144 +222,130 @@ double Random(void){
 
 
 
-
-//Genera un número aleatorio con distribución gaussiana, a partir de un numero random en el intervalo [0,1)
+///Numero aleatorio gaussiano
+//Genera un n mero aleatorio con distribuci n gaussiana, a partir de un numero random en el intervalo [0,1)
 void num_aleatorio_gaussiano (double *dos_numeros_gaussianos){
     double aleatorio_uniforme_1, aleatorio_uniforme_2, auxiliar_1, auxiliar_2;
 
-    ///Aquí hay un problema con el algoritmo: Cuando sale aleatorio_uniforme_1 = 0 ---> ln(0)=-inf; y da error
-    //No se como se supone que deberíamos arreglarlo, de momento solo voy a poner una cláusula de que no sea igual a cero
-    aleatorio_uniforme_1=Random ();
+    ///Aqui hay un problema con el algoritmo: Cuando sale aleatorio_uniforme_1 = 0 ---> ln(0)=-inf; y da error
+    //No se como se supone que deber amos arreglarlo, de momento solo voy a poner una clausula de que no sea igual a cero
+    aleatorio_uniforme_1 = Random ();
     while (aleatorio_uniforme_1 == 0.0)
-        aleatorio_uniforme_1=Random ();
-    aleatorio_uniforme_2=Random ();
+        aleatorio_uniforme_1 = Random ();
+    aleatorio_uniforme_2 = Random ();
 
     auxiliar_1=sqrt(-2*log(aleatorio_uniforme_1));
     auxiliar_2=2*PI*aleatorio_uniforme_2;
 
-    //en la presentación dan como dos posibilidades, según las pruebas que he hecho es indistinto usar una u otra
+    //en la presentaci n dan como dos posibilidades, seg n las pruebas que he hecho es indistinto usar una u otra
     dos_numeros_gaussianos[0]= auxiliar_1*cos(auxiliar_2);
 
-    //Esta sería la segunda forma, solo cambia el cos por el sen
+    //Esta ser a la segunda forma, solo cambia el cos por el sen
     dos_numeros_gaussianos[1] = auxiliar_1*sin(auxiliar_2);
 }
 
 
 
-//Esta función es para comprobar que la funcion de numeros gaussianos rulaba bien, probablemente se quitará en un futuro
-void generador_vector_gaussiano (/*vector de salida*/ double *vector_numeros_gaussianos){
-    int i, N;
-
-    double dos_numeros_gausianos[2];
-    FILE* f;
-    f = fopen("gaussiana.txt", "w");
-
-    for (i = 0 ; i < N; i += 2){
-        num_aleatorio_gaussiano(dos_numeros_gausianos);
-        vector_numeros_gaussianos[i] = dos_numeros_gausianos[0];
-        vector_numeros_gaussianos[i+1] = dos_numeros_gausianos[1];
-        fprintf(f,"%f\n", vector_numeros_gaussianos[i]);
-        fprintf(f,"%f\n", vector_numeros_gaussianos[i+1]);
-    }
-    fclose(f);
-}
-
-
-//Lo mismo, esta función es para comprobar que la funcion de numeros gaussianos rulaba bien, probablemente se quitará en un futuro
-//Aunque, también nos sirve para lo de comprobar que la distribución de posiciones y velocidades sea gaussiana
-void histograma (double *V/*matriz de entrada*/, double *histograma_matriz /*matriz de salida*/){
-    //Variables matriz histograma
-    int asignacion, i, N;
+//Nos sirve para lo de comprobar que la distribuci n de posiciones y velocidades sea gaussiana; y quizÃ¡ otras cosas
+void histograma(double *V, int num_elementos, const char *nombre_archivo) {
+    // Variables
+    int asignacion, i;
     double anchura, min_desconocido, max_desconocido;
+    double histograma_matriz[Intervalo];  // Intervalo viene del #define
 
-    N = sizeof(V);
+    // Inicializar mÃ­nimo y mÃ¡ximo
+    max_desconocido = -1000;
+    min_desconocido = 1000;
 
-    max_desconocido=-1000;
-    min_desconocido=1000;
-    for (i=0;i<N;i++){
-        if (V[i]>max_desconocido){
-            max_desconocido=V[i];
+    // Encontrar el valor mÃ­nimo y mÃ¡ximo en V
+    for (i = 0; i < num_elementos; i++) {
+        if (V[i] > max_desconocido) {
+            max_desconocido = V[i];
         }
-
-        if (V[i]<min_desconocido){
-            min_desconocido=V[i];
+        if (V[i] < min_desconocido) {
+            min_desconocido = V[i];
         }
     }
 
-    anchura=((max_desconocido-min_desconocido)/(double)Intervalo);
-
-    for (i=0;i<Intervalo;i++){
-        histograma_matriz[i]=0.0;
+    // Evitar divisiÃ³n por cero si max == min
+    if (max_desconocido == min_desconocido) {
+        printf("Todos los valores son iguales. No se puede crear un histograma significativo.\n");
+        return;
     }
-    for (i=0;i<N;i++){
-        asignacion=(int)((V[i]-min_desconocido)/anchura);
-        if (asignacion==Intervalo){
-                asignacion=asignacion-1;
+
+    // Calcular la anchura de cada intervalo del histograma
+    anchura = (max_desconocido - min_desconocido) / (double)Intervalo;
+
+    // Inicializar el histograma
+    for (i = 0; i < Intervalo; i++) {
+        histograma_matriz[i] = 0.0;
+    }
+
+    // Llenar el histograma
+    for (i = 0; i < num_elementos; i++) {
+        asignacion = (int)floor((V[i] - min_desconocido) / anchura);
+
+        // Asegurarse de que la asignaciÃ³n no exceda los lÃ­mites
+        if (asignacion >= Intervalo) {
+            asignacion = Intervalo - 1;  // Ajuste para el valor mÃ¡ximo
         }
-        histograma_matriz[asignacion]=histograma_matriz[asignacion]+1;
-    }
-    for (i=0;i<Intervalo;i++){
-        histograma_matriz[i]=histograma_matriz[i]/N;
+        histograma_matriz[asignacion] += 1;
     }
 
-//gráfico en gnuplot
-    FILE* f;
-    f = fopen("histo.txt", "w");
-    int eje_x;
-    eje_x=(int)(Intervalo/2);
-    for (i=0;i<Intervalo;i++){
-        fprintf(f,"%d %f\n", i-eje_x, histograma_matriz[i]);
+    // Normalizar el histograma (convertir a probabilidades)
+    ///Ya no es una probabilidad, cambiar si quiere que sea el caso
+    for (i = 0; i < Intervalo; i++) {
+        histograma_matriz[i] = histograma_matriz[i] / (num_elementos * anchura);
+    }
+
+    // Escribir el histograma a un archivo para gnuplot
+    FILE *f;
+    f = fopen(nombre_archivo, "w");
+    if (f == NULL) {
+        printf("Error al abrir el archivo %s\n", nombre_archivo);
+        return;
+    }
+
+
+    //int eje_x = (int)(Intervalo / 2); //La media queda en eje_x = 47
+    for (i = 0; i < Intervalo; i++) {
+        fprintf(f, "%f %f\n", (i+0.5) * anchura + min_desconocido, histograma_matriz[i]);
     }
     fclose(f);
 
-//comprobación de que las cosas vayan bien xd
-    printf("%f\n", max_desconocido);
+    // ComprobaciÃ³n de que las cosas vayan bien
+    printf("Max: %f, Min: %f\n", max_desconocido, min_desconocido);
 }
 
 
 
+
+
+///Calcular distancias
+//Calculamos la distancia entre monÃ³meros consecutivos, tanto en el mismo eje como en total (distacia euclidea), se usa tanto en la funciÃ³n fuerzas como en la energÃ­a potencial
+void distancias(double **posiciones, double **diferencia_de_posiciones, double *modulo_distancias){
+
+    int i, j;
+
+    for (i = 0; i < (N - 1); i++){
+        for (j = 0; j < dim; j++)
+            diferencia_de_posiciones[i][j] = posiciones[i][j] - posiciones[i+1][j];
+    }
+
+    for (i = 0; i < (N - 1); i++){
+        modulo_distancias[i] = 0;
+        for (j = 0; j < dim; j++)
+            modulo_distancias[i] += diferencia_de_posiciones[i][j]*diferencia_de_posiciones[i][j];
+        modulo_distancias[i] = sqrt(modulo_distancias[i]);
+    }
+}
 
 
 
 
 
 ///     ECUACIONES OSCILADOR      ///
-//ecuacion_oscilador_posicion_punto, en los algoritmos esta suele salir como f(p_n)
-double f_pn (double momento){
-    double x_punto;
-    x_punto=momento/m;
-    return x_punto;
-}
-
-
-
-///IMPORTANTE, esto es (la menos derivada de) el potencial que tendremos que cambiar en la siguiente parte así que ojito
-double fuerza (double posicion){
-    double grad_Vx;
-    grad_Vx=-k*posicion;
-    return grad_Vx;
-}
-
-
-//Término de rozamiento o damping
-double damping (double momento, double nabla_dividido_m){
-    double rozamiento;
-    rozamiento = -nabla_dividido_m*momento;
-    return rozamiento;
-}
-
-
-
-//ecuacion_oscilador_momento_punto, calcula la parte NO ESTOCASTICA de p_punto, en los algoritmos esta suele salir como g(x_n, p_n)
-double g_xn_pn (double posicion, double momento, double nabla_dividido_m){
-    double p_punto;  //aquí lo llamo p_punto, pero realmente no lo es porque le falta el término estocástico
-    p_punto = damping (momento, nabla_dividido_m) + fuerza (posicion);
-    return p_punto;
-}
-
-
-
-//este es el término estocástico, que va incluido en la ecuación del momento
+//este es el termino estocastico, que va incluido en la ecuacion del momento
 //Saca 2 para aprovechar mejor la funcion generadora de numeros gaussianos
 void termino_estocastico_Z (double factor_estocastico, double *dos_terminos_estocasticos){
     double dos_numeros_gaussianos[2];
@@ -347,300 +356,435 @@ void termino_estocastico_Z (double factor_estocastico, double *dos_terminos_esto
 }
 
 
+//Esta funcion rellena el array auiliar de tÃ©rminos estocÃ¡sticos
+void sacar_array_numeros_Z(double **array_Z_aux, double factor_estocastico){
+    double dos_terminos_estocasticos[2];
 
-
-
-
-
-
-///     ALGORITMOS     ///
-
-//Primer algoritmo: Euler-Maruyama
-void Euler_Maruyama (double posicion, double momento, double h, double nabla){
-    int i, pasos, j;
-    double factor_estocastico, dos_terminos_estocasticos[2], nabla_dividido_m, mediapotencial, mediacinetica;
-
-    //Toda la parafernalia de los char es para poder sacar todos los archivos de distintas h y nabla en un solo bucle
-    char nombre_archivo[1023]="Euler_Maruyama_h=", especificador_h[50], especificador_nabla[50], nombre_archivo_parte2[]="_nabla=", nombre_archivo_fin[]=".txt";
-    sprintf(especificador_h, "%f", h);
-    strncat(nombre_archivo, especificador_h, 1024);
-    sprintf(especificador_nabla, "%f", nabla);
-    strncat(nombre_archivo, nombre_archivo_parte2, 1024);
-    strncat(nombre_archivo, especificador_nabla, 1024);
-    strncat(nombre_archivo, nombre_archivo_fin, 1024);
-
-
-
-    FILE *f;
-    f = fopen(nombre_archivo, "w");
-
-    //El algoritmo en verdad son solo estas 5 líneas
-    pasos = (int)(T/h);
-    factor_estocastico = sqrt(2*nabla*K_b_T*h);
-    nabla_dividido_m = nabla/m;
-    mediacinetica=0;
-    mediapotencial=0;
-
-    for (i = 0 ; i < pasos; i += 2){
-        termino_estocastico_Z(factor_estocastico, dos_terminos_estocasticos);
-
-            for(j=0 ; j<2;j++){
-                //En cada paso salen 2 por lo de tener dos numeros gaussianos
-                posicion += f_pn(momento)*h;
-                momento += g_xn_pn(posicion, momento, nabla_dividido_m)*h + dos_terminos_estocasticos[j];
-
-                fprintf(f,"%f ", (i+j)*h); //Esto es el tiempo
-                fprintf(f,"%f ", posicion);
-                fprintf(f,"%f ", momento);
-
-                #ifdef true
-                    mediacinetica+=energia_cinetica(momento);
-                    mediapotencial+=energia_potencial(posicion);
-                    fprintf(f,"%f ", mediacinetica/(i+j+1));
-                    fprintf(f,"%f ", mediapotencial/(i+j+1));
-                    fprintf(f,"%f\n", (mediapotencial+mediacinetica)/(i+j+1));
-                    //fprintf(f,"%f ", energia_cinetica(momento));
-                    //fprintf(f,"%f\n", energia_potencial(posicion));
-
-                #else
-                    fprintf(f,"\n");
-
-                #endif // true
-
-            }
-            /*//Segundo paso de tiempo
-            posicion += f_pn(momento)*h;
-            momento += g_xn_pn(posicion, momento, nabla_dividido_m)*h + dos_terminos_estocasticos[1];
-
-            fprintf(f,"%f ", (i+1)*h); //Esto es el tiempo
-            fprintf(f,"%f ", posicion);
-            fprintf(f,"%f ", momento);
-
-            #ifdef true
-                fprintf(f,"%f ", energia_cinetica(momento));
-                fprintf(f,"%f\n", energia_potencial(posicion));
-
-            #else
-                fprintf(f,"\n");
-
-            #endif // true*/
-    }
-    fclose(f);
-}
-
-
-
-
-void Runge_Kutta (double posicion, double momento, double h, double nabla){
-    int i, pasos, j;
-    //Uso la notación del power point de clase, las barras bajas se deben entender como "sub", p.ej f sub x1
-    double f_x1, f_x2, g_p1, g_p2, Z, h_medios, factor_estocastico, dos_terminos_estocasticos[2], nabla_dividido_m, mediapotencial, mediacinetica;
-
-    //Toda la parafernalia de los char es para poder sacar todos los archivos de distintas h y nabla en un solo bucle
-    char nombre_archivo[1023]="Runge_Kutta_h=", especificador_h[50], especificador_nabla[50], nombre_archivo_parte2[]="_nabla=", nombre_archivo_fin[]=".txt";
-    sprintf(especificador_h, "%f", h);
-    strncat(nombre_archivo, especificador_h, 1024);
-    sprintf(especificador_nabla, "%f", nabla);
-    strncat(nombre_archivo, nombre_archivo_parte2, 1024);
-    strncat(nombre_archivo, especificador_nabla, 1024);
-    strncat(nombre_archivo, nombre_archivo_fin, 1024);
-
-
-    FILE *f;
-    f = fopen(nombre_archivo, "w");
-
-    pasos = (int)(T/h);
-    h_medios = h*0.5;
-    factor_estocastico = sqrt(2*nabla*K_b_T*h);
-    nabla_dividido_m = nabla/m;
-
-    mediacinetica=0;
-    mediapotencial=0;
-    for (i = 0 ; i < pasos; i += 2){
-
-        termino_estocastico_Z(factor_estocastico, dos_terminos_estocasticos);
-
-        for(j=0;j<2;j++){
-            //De nuevo, de cada paso de tiempo hay que hacer 2
-            Z = dos_terminos_estocasticos[j];
-
-            //Paso 1
-            f_x1=f_pn(momento+Z);
-            g_p1=g_xn_pn(posicion, momento+Z, nabla_dividido_m);
-
-            //Paso 2
-            f_x2=f_pn(momento+h*g_p1);
-            g_p2=g_xn_pn(posicion+h*f_x1, momento+h*g_p1, nabla_dividido_m);
-
-            //Final, calculo de nuevo punto en el espacio de fases
-            posicion += h_medios*(f_x1+f_x2);
-            momento += h_medios*(g_p1+g_p2)+Z;
-
-            fprintf(f,"%f ", (i+j)*h); //Esto es el tiempo
-            fprintf(f,"%f ", posicion);
-            fprintf(f,"%f ", momento);
-
-            #ifdef true
-                mediacinetica+=energia_cinetica(momento);
-                mediapotencial+=energia_potencial(posicion);
-                fprintf(f,"%f ", mediacinetica/(i+j+1));
-                fprintf(f,"%f ", mediapotencial/(i+j+1));
-                fprintf(f,"%f\n", (mediapotencial+mediacinetica)/(i+j+1));
-            /*
-                fprintf(f,"%f ", energia_cinetica(momento));
-                fprintf(f,"%f\n", energia_potencial(posicion));*/
-
-            #else
-                fprintf(f,"\n");
-
-            #endif // true
+    for (int i = 0; i < N; i+= 2){
+        for (int j = 0; j < dim; j++){
+            termino_estocastico_Z (factor_estocastico, dos_terminos_estocasticos);
+            array_Z_aux[i][j] = dos_terminos_estocasticos[0];
+            array_Z_aux[i+1][j] = dos_terminos_estocasticos[1];
         }
-
-            /*
-            //Segundo paso de tiempo (no confundir con los pasos internos de RK)
-            Z = dos_terminos_estocasticos[1];
-
-            //Paso 1
-            f_x1=f_pn(momento+Z);
-            g_p1=g_xn_pn(posicion, momento+Z, nabla_dividido_m);
-
-            //Paso 2
-            f_x2=f_pn(momento+h*g_p1);
-            g_p2=g_xn_pn(posicion+h*f_x1, momento+g_p1, nabla_dividido_m);
-
-            //Final, calculo de nuevo punto en el espacio de fases
-            posicion += h_medios*(f_x1+f_x2);
-            momento += h_medios*(g_p1+g_p2)+Z;
-
-            fprintf(f,"%f ", (i+1)*h); //Esto es el tiempo
-            fprintf(f,"%f ", posicion);
-            fprintf(f,"%f ", momento);
-
-            #ifdef true
-                fprintf(f,"%f ", energia_cinetica(momento));
-                fprintf(f,"%f\n", energia_potencial(posicion));
-
-            #else
-                fprintf(f,"\n");
-
-            #endif // true
-            */
     }
-    fclose(f);
+}
+
+
+
+//Aqui rellenamos el array auxiliar de fuerzas, sea el viejo o el nuevo
+void funcion_fuerzas(double **fuerzas, double **diferencia_de_posiciones, double *modulo_distancias){
+    int i, j;
+    double constante = -k_e*1.0;
+
+
+    //En la cadena, a cada polimero (excepto los dos extrmos) le actuan dos fuerzas. Pero, bien sabemos que varias se repiten pues la que hace el
+    //polimero 1 sobre el 2 es igual a menos la del 2 sobre el 1. Asi que para variar, otro array auxiliar, considerando solo las fuerza en un sentido:
+    double **fuerzas_un_sentido = malloc(N * sizeof(double *));
+    for (i = 0; i < (N - 1); i++){
+        fuerzas_un_sentido[i] = malloc(dim * sizeof(double));
+        for (j = 0; j < dim; j++)
+            fuerzas_un_sentido[i][j] = -constante * diferencia_de_posiciones[i][j] * (1 - (1.0*b)/modulo_distancias[i]);
+    }
+
+    //Ahora si por fin, sacamos la fuerza final sobre un monomero:
+    for (j = 0; j < dim; j++){
+        // Fuerza sobre el primer monÃ³mero (solo tiene conexiÃ³n con el segundo)
+        fuerzas[0][j] = -fuerzas_un_sentido[0][j];
+        // Fuerza sobre el Ãºltimo monÃ³mero (solo tiene conexiÃ³n con el penÃºltimo)
+        fuerzas[N-1][j] = fuerzas_un_sentido[N-2][j];
+
+        // Fuerza sobre los monÃ³meros intermedios
+        for (i = 1; i < (N - 1); i++)
+            fuerzas[i][j] = fuerzas_un_sentido[i-1][j] - fuerzas_un_sentido[i][j];
+    }
+
+    //Liberamos memoria
+    for (i = 0; i < (N - 1); i++)
+        free(fuerzas_un_sentido[i]);
+    free(fuerzas_un_sentido);
 }
 
 
 
 
-void verlet (double posicion, double momento, double h, double nabla){
-    int i, j, pasos;
-    double mediapotencial,mediacinetica;
-    //Uso la notación del power point de clase, las barras bajas se deben entender como "sub", p.ej f sub x1
-    double factor_estocastico, dos_terminos_estocasticos[2], a, b, factor_posicion, fuerza_ahora, h_medios, Z;
 
-    //Toda la parafernalia de los char es para poder sacar todos los archivos de distintas h y nabla en un solo bucle
-    char nombre_archivo[1023]="Verlet_h=", especificador_h[50], especificador_nabla[50], nombre_archivo_parte2[]="_nabla=", nombre_archivo_fin[]=".txt";
-    sprintf(especificador_h, "%f", h);
-    strncat(nombre_archivo, especificador_h, 1024);
-    sprintf(especificador_nabla, "%f", nabla);
-    strncat(nombre_archivo, nombre_archivo_parte2, 1024);
-    strncat(nombre_archivo, especificador_nabla, 1024);
-    strncat(nombre_archivo, nombre_archivo_fin, 1024);
+///     -------------------EJECUCION ALGORITMO VERLET---------------------     ///
+///Quizas serÃ­a bueno hacer un cambio de sistema de referencia, bien sea en torno al CDM o a un monomero concreto pÃ ra evitar overflow en las posiciones, pero serÃ­a un jaleo tambien
+void paso_verlet_posiciones(double **posiciones, double **momentos, double **fuerza_old, double **array_Z_aux, double factor_posicion){
+    for (int i = 0; i < N; i++){
+        for (int j = 0; j < dim; j++)
+            posiciones[i][j] += factor_posicion*(2*momentos[i][j]+h*fuerza_old[i][j]+array_Z_aux[i][j]);
+    }
+}
 
 
-    FILE *f;
-    f = fopen(nombre_archivo, "w");
+void paso_verlet_momentos(double **momentos, double **fuerza, double **fuerza_old, double **array_Z_aux, double a, double b_verlet, double h_medios){
+    for (int i = 0; i < N; i++){
+        for (int j = 0; j < dim; j++)
+            momentos[i][j] = a * momentos[i][j] + h_medios * (a * fuerza_old[i][j] + fuerza[i][j]) + b_verlet * array_Z_aux[i][j];
+    }
+}
 
+
+
+
+void verlet (double **posiciones, double **momentos){
+
+    int t, i, j, pasos;
+    double a, b_verlet, factor_posicion, h_medios, factor_estocastico;
+
+    //Calculamos las variables necesarias para Verlet en cualquier caso, que se mantendrÃ¡n constantes durante el bucle
     pasos = (int)(T/h);
-    factor_estocastico = sqrt(2*nabla*K_b_T*h);
+
     h_medios = h/2;
-    b = 1/(1+nabla*h_medios/m);
-    a = 2*b-1;
-    factor_posicion = b*h_medios/m;
-    mediacinetica=0;
-    mediapotencial=0;
-
-    for (i = 0 ; i < pasos; i += 2){
-
-        termino_estocastico_Z(factor_estocastico, dos_terminos_estocasticos);
-
-
-        for(j=0;j<2;j++){
-        //Paso 1 de tiempo
-            fuerza_ahora = fuerza(posicion);
-            ///AQUI NO TENGO CLARO SI HAY QUE MULTIPLICAR EL GAUSSIANO POR h
-            Z = dos_terminos_estocasticos[j];
-
-            posicion += factor_posicion*(2*momento+h*fuerza_ahora+Z);
-            momento = a*momento+h_medios*(a*fuerza_ahora+fuerza(posicion))+b*Z;
-
-            fprintf(f,"%f ", (i+j)*h); //Esto es el tiempo
-            fprintf(f,"%f ", posicion);
-            fprintf(f,"%f ", momento);
+    b_verlet = 1/(1+nabla*h_medios/m);
+    a = 2*b_verlet-1;
+    factor_posicion = b_verlet*h_medios/m;
+    factor_estocastico = sqrt(2*nabla*K_b_T*h);
 
 
 
-            #ifdef true
-                mediacinetica+=energia_cinetica(momento);
-                mediapotencial+=energia_potencial(posicion);
-                fprintf(f,"%f ", mediacinetica/(i+j+1));
-                fprintf(f,"%f ", mediapotencial/(i+j+1));
-                fprintf(f,"%f\n", (mediapotencial+mediacinetica)/(i+j+1));
 
-                /*fprintf(f,"%f ", energia_cinetica(momento));
-                fprintf(f,"%f\n", energia_potencial(posicion));*/
+    ///Arrays auxiliares
+    //Es conveniente tambien crear dos arrayses de fuerzas para simplificar la implementacion, uno con las viejas y otro las nuevas
+    double **fuerzas = malloc(N * sizeof(double *));
+    for (i = 0; i < N; i++)
+        fuerzas[i] = malloc(dim * sizeof(double));
 
-            #else
-                fprintf(f,"\n");
+    double **fuerzas_old = malloc(N * sizeof(double *));
+    for (i = 0; i < N; i++)
+        fuerzas_old[i] = malloc(dim * sizeof(double));
 
-            #endif // true
+
+    //Tambien es conveniente sacar las distancias entre monÃ³meros consecutivos, se usa tanto en la funciÃ³n fuerzas como en la energÃ­a potencial
+    double **diferencia_de_posiciones = malloc(N * sizeof(double *));
+    for (i = 0; i < (N - 1); i++)
+        diferencia_de_posiciones[i] = malloc(dim * sizeof(double));
+
+    double modulo_distancias[N-1];
+
+
+    //Por ultimo (creo), un array de numeros aleatorios, ya que los que se aplican en cada particula y eje deben ser distintos
+    double **array_Z_aux = malloc(N * sizeof(double *));
+    for (i = 0; i < N; i++)
+        array_Z_aux[i] = malloc(dim * sizeof(double));
+
+
+    //Para varias cosas tmabiÃ©n nos hace falta conocer el CDM y el CDMomentos:
+    double CDM[3], momentum_CDM[3];
+
+
+
+
+    ///Datos a medir
+    //ENERGIA (promedio)
+    #ifdef energia
+        double media_E_cin = 0, media_E_pot = 0;
+
+        char nombre_archivo_energias[1024];
+        sprintf(nombre_archivo_energias, "energia_polimero_N=%d_T=%d.dat", N, T);
+        FILE *archivo_energias;
+        archivo_energias = fopen(nombre_archivo_energias, "w");
+
+        fprintf(archivo_energias, "#Tiempo T\t E cinetica\t E potencial\t E total\n");
+        //fflush(archivo_energias);
+    #endif // energia
+
+
+    //RADIO DE GIRO (promedio)
+    #ifdef radio_de_giro
+        double Rg_media = 0;
+
+        char nombre_archivo_Rg[1024];
+        sprintf(nombre_archivo_Rg, "Radio_de_giro_N=%d_T=%d.dat", N, T);
+        FILE *archivo_Rg;
+        archivo_Rg = fopen(nombre_archivo_Rg, "w");
+
+        fprintf(archivo_Rg, "#Tiempo T\t Radio de Giro\n");
+    #endif // radio_de_giro
+
+
+    //DISTANCIA EXTREMO A EXTREMO (promedio)
+    #ifdef dist_extremo_extremo
+        double distancia_extremo_extremo_media = 0, vector_extremo_extremo[3], vector_extremo_extremo_medio[3] = {0};
+
+        char nombre_archivo_dist_ext_ext[1024];
+        sprintf(nombre_archivo_dist_ext_ext, "Distancia_extremo_extremo_N=%d_T=%d.dat", N, T);
+        FILE *archivo_dist_ext_ext;
+        archivo_dist_ext_ext = fopen(nombre_archivo_dist_ext_ext, "w");
+
+        fprintf(archivo_dist_ext_ext, "#Tiempo T\t Dist extremo-extremo: \t x\t y\t z\t modulo\n");
+    #endif // dist_extremo_extremo
+
+
+
+
+
+
+    ///Empieza el bucle con los pasos del algoritmo
+
+    //Inicializamos fuerzas y distancias
+    distancias(posiciones, diferencia_de_posiciones, modulo_distancias);
+    funcion_fuerzas(fuerzas, diferencia_de_posiciones, modulo_distancias);
+
+
+    for (t = 0; t < pasos; t++) {
+        // Guardar las fuerzas viejas
+        for (i = 0; i < N; i++) {
+            for (j = 0; j < dim; j++) {
+                fuerzas_old[i][j] = fuerzas[i][j];
+            }
         }
 
 
-/*
-        //Paso 2 de tiempo
-        fuerza_ahora = fuerza(posicion);
-        ///AQUI NO TENGO CLARO SI HAY QUE MULTIPLICAR EL GAUSSIANO POR h
-        Z = dos_terminos_estocasticos[1];
+        // Generar tÃ©rminos estocÃ¡sticos
+        sacar_array_numeros_Z(array_Z_aux, factor_estocastico);
 
-        posicion += factor_posicion*(2*momento+h*fuerza_ahora+Z);
-        momento = a*momento+h_medios*(a*fuerza_ahora+fuerza(posicion))+b*Z;
+        // Actualizar posiciones
+        paso_verlet_posiciones(posiciones, momentos, fuerzas_old, array_Z_aux, factor_posicion);
 
-        fprintf(f,"%f ", (i+1)*h); //Esto es el tiempo
-        fprintf(f,"%f ", posicion);
-        fprintf(f,"%f ", momento);
+        //Actualizamos las distancias entre monomeros consecutivos
+        distancias(posiciones, diferencia_de_posiciones, modulo_distancias);
+
+        // Calcular nuevas fuerzas
+        funcion_fuerzas(fuerzas, diferencia_de_posiciones, modulo_distancias);
+
+        // Actualizar momentos
+        paso_verlet_momentos(momentos, fuerzas, fuerzas_old, array_Z_aux, a, b_verlet, h_medios);
+
+        //Por Ãºltimo, actualizamos el CDM
+        calcular_CDM_y_momentum(posiciones, momentos, CDM, momentum_CDM);
 
 
-        #ifdef true
 
-            fprintf(f,"%f ", energia_cinetica(momento));
-            fprintf(f,"%f\n", energia_potencial(posicion));
 
-        #else
-            fprintf(f,"\n");
 
-        #endif // true*/
+        ///Datos a medir
+        //ENERGIAS, acumular energÃ­as para promedios
+        #ifdef energia
+            media_E_cin += energia_cinetica_cadena(momentos);
+            media_E_pot += energia_potencial_cadena(modulo_distancias);
+        #endif // energia
 
+        //RADIO DE GIRO, acumulamos datos del radio de giro para calcular el promedio
+        #ifdef radio_de_giro
+            Rg_media += cacular_radio_de_giro(posiciones, CDM);
+        #endif // radio_de_giro
+
+        //DISTANCIA EXTREMO A EXTREMO, de nuevo un promedio, pero en este caso calculamos tanto la media vectorial como de distancia
+        #ifdef dist_extremo_extremo
+            distancia_extremo_extremo_media += distancia_extremo_extremo(posiciones, vector_extremo_extremo);
+            for (j = 0; j < dim; j++)
+                vector_extremo_extremo_medio[j] += vector_extremo_extremo[j];
+        #endif // dist_extremo_extremo
+
+
+        // Escribir en el archivo cada `pasos_representar` pasos
+        if (t % pasos_representar == 0) {
+            #ifdef energia
+                fprintf(archivo_energias, "%f\t%lf\t%lf\t%lf\n", t * h, media_E_cin / (t + 1), media_E_pot / (t + 1), (media_E_cin + media_E_pot) / (t + 1));
+                //fflush(archivo_energias);
+            #endif // energia
+
+            #ifdef radio_de_giro
+                fprintf(archivo_Rg, "%f\t%lf\n", t * h, Rg_media / (t + 1));
+            #endif // radio_de_giro
+
+            #ifdef dist_extremo_extremo
+                fprintf(archivo_dist_ext_ext, "%f\t%lf\t%lf\t%lf\t%lf\n", t * h, vector_extremo_extremo_medio[0] / (t + 1), vector_extremo_extremo_medio[1] / (t + 1), vector_extremo_extremo_medio[2] / (t + 1), distancia_extremo_extremo_media / (t+1));
+            #endif // dist_extremo_extremo
+
+
+            //Y ya que estamos, renormalizamos las posiciones respecto del CDM
+            //void posiciones_respecto_al_CDM(posiciones, momentos, CDM, momentum_CDM);
+
+        }
+        /*
+        // Comprobar errores en la escritura
+        if (ferror(archivo_energias) || ferror(archivo_dist_ext_ext) || ferror(archivo_Rg)) {
+            printf("Error escribiendo en el archivo\n");
+            fclose(archivo_energias);
+            return;
+        }
+        */
     }
-    fclose(f);
+    ///Fin del bucle principal
+
+
+    //Cerramos archivos
+    #ifdef energia
+        fclose(archivo_energias);
+        printf("Archivo de energias generado correctamente: %s\n", nombre_archivo_energias);
+    #endif // energia
+    #ifdef dist_extremo_extremo
+        fclose(archivo_dist_ext_ext);
+        printf("Archivo de dist ext-ext generado correctamente: %s\n", nombre_archivo_dist_ext_ext);
+    #endif // dist_extremo_extremo
+    #ifdef radio_de_giro
+        fclose(archivo_Rg);
+        printf("Archivo de RG generado correctamente: %s\n", nombre_archivo_Rg);
+    #endif // radio_de_giro
+
+
+    //Liberamos memoria
+    for (i = 0; i < N; i++){
+        free(fuerzas[i]);
+        free(fuerzas_old[i]);
+        free(array_Z_aux[i]);
+    }
+    free(fuerzas);
+    free(fuerzas_old);
+    free(array_Z_aux);
+
+    for (i = 0; i < (N - 1); i++)
+        free(diferencia_de_posiciones[i]);
+    free(diferencia_de_posiciones);
+
 }
+///     -------------------HASTA AQUI VERLET---------------------       ///
+
 
 
 
 
 
 ///Datos a medir
-double energia_cinetica (double momento){
+double energia_cinetica_cadena (double **momentos){
+    int i, j;
+    double Ecin_cadena = 0;
+
+    for (i = 0; i < N; i++){
+        for (j = 0; j < dim; j++){
+            Ecin_cadena += energia_cinetica_monomero_1D(momentos[i][j]);
+            //if ((j == 0) && (i == 0))
+                //printf("%f\n",momentos[i][j]);
+                //printf("%f\n",Ecin_cadena);
+        }
+    }
+
+    return Ecin_cadena;
+}
+
+
+//A diferencia de la cietica, la potencial va asociada a un "muelle" (o enlace) y no a la partÃ­cula
+double energia_potencial_cadena(double *modulo_distancias) {
+    int i;
+    double Epot_cadena = 0;
+
+    for (i = 0; i < N - 1; i++)
+        Epot_cadena += energia_potencial_monomero_1D(modulo_distancias[i]);
+
+    return Epot_cadena;
+}
+
+
+
+double energia_cinetica_monomero_1D (double momento){
     double Ec;
     Ec = momento*momento*0.5/m;
     return Ec;
 }
 
 
-double energia_potencial(double posicion){
-    double Ep;
-    Ep = 0.5*posicion*posicion*k;
+
+double energia_potencial_monomero_1D (double distancia){
+    double Ep, parentesis;
+    parentesis = distancia - b;
+    Ep = 0.5*k_e*parentesis*parentesis;
     return Ep;
 }
 
+
+
+///SE PUEDE MEJORAR
+double distancia_extremo_extremo(double **posiciones, double *vector_estremo_estremo){
+    double dist_ext_ext = 0;
+    for (int j = 0; j < dim; j++){
+        vector_estremo_estremo[j] = posiciones[0][j] - posiciones[N-1][j];
+        dist_ext_ext += vector_estremo_estremo[j] * vector_estremo_estremo[j];
+    }
+    dist_ext_ext = sqrt(dist_ext_ext);
+    return dist_ext_ext;
+}
+
+
+
+
+double cacular_radio_de_giro(double **posiciones, double *CDM){
+    double dist_al_CDM, Rg = 0, parentesis;
+
+    for (int i = 0; i < N; i++){
+        dist_al_CDM = 0;
+        for (int j = 0; j < dim; j++){
+            parentesis = posiciones[i][j] - CDM[j];
+            dist_al_CDM += parentesis*parentesis;
+        }
+        Rg += dist_al_CDM;
+    }
+    Rg = sqrt(Rg/N);
+    return Rg;
+}
+
+
+
+///Otras cosas que no van en ninguna categoria
+//Inicializamos las posiciones y momentos
+void config_inicial_polimero(double **posiciones, double **momentos){
+
+    int i, j, direccion;
+
+
+    //Ponemos simplemente que los momentos iniciales sean 0
+    for (i = 0; i < N; i++){
+        for (j = 0; j < dim; j++)
+            momentos[i][j] = 0;
+    }
+
+
+    //En cuanto a las posiciones, ponemos el primero en 0, y las sucesivas las ponemos en uno de los ejes aleatoriamente a distancia b del anterior:
+    for (j = 0; j < dim; j++)
+        posiciones[0][j] = 0;
+
+    for (i = 1; i < N; i++){
+        for (j = 0; j < dim; j++){
+            posiciones[i][j] = posiciones[i-1][j];
+        }
+        direccion = (int)(Random() * 6);
+        if (direccion < 3)
+            posiciones[i][direccion] += b;
+        else{
+            direccion = direccion - 3;
+            posiciones[i][direccion] -= b;
+        }
+    }
+}
+
+
+
+//Lo necesitamos para calcular el radio de giro, y en el futuro para representar el polÃ­mero
+void calcular_CDM_y_momentum(double **posiciones, double **momentos, double *CDM, double *momentum_CDM) {
+    for (int j = 0; j < dim; j++) {
+        CDM[j] = 0.0;
+        momentum_CDM[j] = 0.0;
+    }
+
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < dim; j++) {
+            CDM[j] += posiciones[i][j] / N;
+            momentum_CDM[j] += momentos[i][j] / N;
+        }
+    }
+}
+
+
+//Renormaliza las distancias y momentos respecto del Centro De Masas
+void posiciones_respecto_al_CDM(double **posiciones, double **momentos, double *CDM, double *momentum_CDM) {
+    // Ajustamos posiciones respecto al CDM
+    for (int i = 0; i < N; i++) { // Ahora incluye todas las partÃ­culas
+        for (int j = 0; j < dim; j++) {
+            posiciones[i][j] -= CDM[j];
+            momentos[i][j] -= momentum_CDM[j]; // Ajustamos momentos tambiÃ©n
+        }
+    }
+}
 
