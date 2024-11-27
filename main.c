@@ -1,5 +1,5 @@
 ///     -------Practica 5 TFIII, Sim molecular------      ///
-       /// -----Tercera parte: POLIMERO----- ///
+   /// -----Tercera parte: POLIMERO (con fuerza)----- ///
 
 
 //actualizado el 23-11-24
@@ -47,8 +47,8 @@
 
 
 //Numero de monomeros en la cadena, luego se puede poner con un #define, a partir del punto vii
-int N = 2;
-//#define N 16
+//int N = 2;
+#define N 16
 
 
 
@@ -79,20 +79,20 @@ void num_aleatorio_gaussiano (double *dos_numeros_gaussianos);
 //Histogramas, en principio su funcion es la misma, se que son distintas pero no se exactamente en que
 void histograma (double *V/*matriz de entrada*/,int num_elementos, const char *nombre_archivo);
 
-///Calcular distancias
+//Calcular distancias entre monomeros consecutivos
 void distancias(double **posiciones, double **diferencia_de_posiciones, double *modulo_distancias);
 
 //Ecuaciones oscilador
 void termino_estocastico_Z (double factor_estocastico, double *dos_terminos_estocasticos);
 void sacar_array_numeros_Z(double **array_Z_aux, double factor_estocastico);
 
-void funcion_fuerzas(double **fuerzas, double **diferencia_de_posiciones, double *modulo_distancias);
+void funcion_fuerzas(double **fuerzas, double **diferencia_de_posiciones, double *modulo_distancias, double fuerza_extremo);
 
 
 //Algoritmo
 void paso_verlet_posiciones(double **posiciones, double **momentos, double **fuerza_old, double **array_Z_aux, double factor_posicion);
 void paso_verlet_momentos(double **momentos, double **fuerza, double **fuerza_old, double **array_Z_aux, double a, double b_verlet, double h_medios);
-void verlet (double **posiciones, double **momentos);
+void verlet (double **posiciones, double **momentos, double fuerza_extremo, double *vector_extremo_extremo_medio);
 
 
 //Datos para medir
@@ -102,7 +102,9 @@ double energia_cinetica_monomero_1D (double momento);
 double energia_potencial_monomero_1D (double distancia);
 
 double distancia_extremo_extremo(double **posiciones, double *vector_estremo_estremo);
-double cacular_radio_de_giro(double **posiciones, double *CDM);
+
+//Todas menos esta se podrían eliminar
+double radio_de_giro(double **posiciones, double *CDM);
 
 
 //Cosas auxiliares
@@ -110,16 +112,6 @@ void config_inicial_polimero(double **posiciones, double **momentos);
 void calcular_CDM_y_momentum(double **posiciones, double **momentos, double *CDM, double *momentum_CDM);
 void posiciones_respecto_al_CDM(double **posiciones, double **momentos, double *CDM, double *momentum_CDM);
 
-
-
-
-
-//Y volvemos a meter #ifdefs, esta vez no se va a descontrolar tanto como en el doble pozo xd
-//#define energia
-
-#define radio_de_giro
-
-//#define dist_extremo_extremo
 
 
 
@@ -136,9 +128,6 @@ int main(){
     ini_ran(time(NULL));
 
 
-    ///A partir de aquí el valor de N va a ser variable. No tabulo porque luego se mantendrá fijo y me da mucho palo tener que cambiarlo
-    //Si no ha cambiado, N es variable global inicializada en 2. Si solo se quiere una N pues poner algo como: for (N = 4; N < 5; N *= 2)
-    for (N = 16; N < 65; N *= 2){
     ///Arrays de las coordenadas generalizadas
     /*
     En esta parte, vamos a tener N partículas con 3 posiciones, momentos cada una; 6N variables.
@@ -160,7 +149,27 @@ int main(){
 
 
     ///Ejecutamos Verlet y sacamos absolutamente todo
-    verlet (posiciones, momentos);
+    //Vamos a hacer un barrido en fuerzas (adimensionalizada):
+    double fuerza_extremo, vector_extremo_extremo_medio[3], modulo_vector_extremo_extremo_medio = 0, suma_vector_extremo_extremo_medio = 0;
+    char nombre_archivo_fuerza_vs_extension[1024];
+    sprintf(nombre_archivo_fuerza_vs_extension, "fuerza_vs_extension_T=%d_N=%d", T, N);
+    FILE *archivo_fuerza_vs_extension;
+    archivo_fuerza_vs_extension = fopen(nombre_archivo_fuerza_vs_extension, "w")
+    fprintf(archivo_fuerza_vs_extension, "#Fuerza\t Extension media en:\t x\t y\t z\t x+y+z\t modulo\t");
+
+    for (fuerza_extremo = 0.2; fuerza_extremo < 1.1; fuerza_extremo += 0.2){
+        for (j = 0; j < 3; j++)
+            vector_extremo_extremo_medio[j] = 0;
+        verlet (posiciones, momentos, fuerza_extremo, vector_extremo_extremo_medio);
+        for (j = 0; j < 3; j++){
+            modulo_vector_extremo_extremo_medio += vector_extremo_extremo_medio[j]*vector_extremo_extremo_medio[j];
+            suma_vector_extremo_extremo_medio += vector_extremo_extremo_medio[j];
+        }
+
+        fprintf(archivo_fuerza_vs_extension, "%f\t %f\t %f\t %f\t %f\t %f\t ", vector_extremo_extremo_medio[0], vector_extremo_extremo_medio[1], vector_extremo_extremo_medio[2], suma_vector_extremo_extremo_medio, modulo_vector_extremo_extremo_medio);
+    }
+
+    fclose(archivo_fuerza_vs_extension);
 
 
 
@@ -174,10 +183,6 @@ int main(){
     for (i = 0; i < N; i++)
         free(momentos[i]);
     free(momentos);
-
-
-    printf("Completado N = %d", N);
-    }    //Fin del bucle en N
 }
 ///     ------FIN DEL MAIN------     ///
 
@@ -243,7 +248,6 @@ void num_aleatorio_gaussiano (double *dos_numeros_gaussianos){
     //Esta ser a la segunda forma, solo cambia el cos por el sen
     dos_numeros_gaussianos[1] = auxiliar_1*sin(auxiliar_2);
 }
-
 
 
 //Nos sirve para lo de comprobar que la distribuci n de posiciones y velocidades sea gaussiana; y quizá otras cosas
@@ -370,9 +374,8 @@ void sacar_array_numeros_Z(double **array_Z_aux, double factor_estocastico){
 }
 
 
-
 //Aqui rellenamos el array auxiliar de fuerzas, sea el viejo o el nuevo
-void funcion_fuerzas(double **fuerzas, double **diferencia_de_posiciones, double *modulo_distancias){
+void funcion_fuerzas(double **fuerzas, double **diferencia_de_posiciones, double *modulo_distancias, double fuerza_extremo){
     int i, j;
     double constante = -k_e*1.0;
 
@@ -388,15 +391,17 @@ void funcion_fuerzas(double **fuerzas, double **diferencia_de_posiciones, double
 
     //Ahora si por fin, sacamos la fuerza final sobre un monomero:
     for (j = 0; j < dim; j++){
-        // Fuerza sobre el primer monómero (solo tiene conexión con el segundo)
-        fuerzas[0][j] = -fuerzas_un_sentido[0][j];
-        // Fuerza sobre el último monómero (solo tiene conexión con el penúltimo)
+        // Fuerza sobre el primer monómero (solo tiene conexión con el segundo), PERO ya que ahora está fijo pues vale 0, aunque daría igual porque su posición no se actualiza
+        fuerzas[0][j] = 0;     //-fuerzas_un_sentido[0][j];
+        // Fuerza sobre el último monómero (solo tiene conexión con el penúltimo); y ahora también le añadimos una fuerza en la diracción x, que viene fuera del bucle
         fuerzas[N-1][j] = fuerzas_un_sentido[N-2][j];
 
         // Fuerza sobre los monómeros intermedios
         for (i = 1; i < (N - 1); i++)
             fuerzas[i][j] = fuerzas_un_sentido[i-1][j] - fuerzas_un_sentido[i][j];
     }
+    ///Añadimos una fuerza cte en la dirección x:
+    fuerzas[N-1][0] += fuerza_extremo;
 
     //Liberamos memoria
     for (i = 0; i < (N - 1); i++)
@@ -411,7 +416,7 @@ void funcion_fuerzas(double **fuerzas, double **diferencia_de_posiciones, double
 ///     -------------------EJECUCION ALGORITMO VERLET---------------------     ///
 ///Quizas sería bueno hacer un cambio de sistema de referencia, bien sea en torno al CDM o a un monomero concreto pàra evitar overflow en las posiciones, pero sería un jaleo tambien
 void paso_verlet_posiciones(double **posiciones, double **momentos, double **fuerza_old, double **array_Z_aux, double factor_posicion){
-    for (int i = 0; i < N; i++){
+    for (int i = 1; i < N; i++){
         for (int j = 0; j < dim; j++)
             posiciones[i][j] += factor_posicion*(2*momentos[i][j]+h*fuerza_old[i][j]+array_Z_aux[i][j]);
     }
@@ -419,7 +424,7 @@ void paso_verlet_posiciones(double **posiciones, double **momentos, double **fue
 
 
 void paso_verlet_momentos(double **momentos, double **fuerza, double **fuerza_old, double **array_Z_aux, double a, double b_verlet, double h_medios){
-    for (int i = 0; i < N; i++){
+    for (int i = 1; i < N; i++){
         for (int j = 0; j < dim; j++)
             momentos[i][j] = a * momentos[i][j] + h_medios * (a * fuerza_old[i][j] + fuerza[i][j]) + b_verlet * array_Z_aux[i][j];
     }
@@ -428,7 +433,7 @@ void paso_verlet_momentos(double **momentos, double **fuerza, double **fuerza_ol
 
 
 
-void verlet (double **posiciones, double **momentos){
+void verlet (double **posiciones, double **momentos, double fuerza_extremo, double *vector_extremo_extremo_medio){
 
     int t, i, j, pasos;
     double a, b_verlet, factor_posicion, h_medios, factor_estocastico;
@@ -470,51 +475,21 @@ void verlet (double **posiciones, double **momentos){
         array_Z_aux[i] = malloc(dim * sizeof(double));
 
 
-    //Para varias cosas tmabién nos hace falta conocer el CDM y el CDMomentos:
-    double CDM[3], momentum_CDM[3];
+
 
 
 
 
     ///Datos a medir
-    //ENERGIA (promedio)
-    #ifdef energia
-        double media_E_cin = 0, media_E_pot = 0;
+     //DISTANCIA EXTREMO A EXTREMO (promedio)
+    double distancia_extremo_extremo_media = 0, vector_extremo_extremo[3], CDM[3], momentum_CDM[3];
 
-        char nombre_archivo_energias[1024];
-        sprintf(nombre_archivo_energias, "energia_polimero_N=%d_T=%d.dat", N, T);
-        FILE *archivo_energias;
-        archivo_energias = fopen(nombre_archivo_energias, "w");
+    char nombre_archivo_dist_ext_ext[1024];
+    sprintf(nombre_archivo_dist_ext_ext, "Distancia_extremo_extremo_N=%d_T=%d.dat", N, T);
+    FILE *archivo_dist_ext_ext;
+    archivo_dist_ext_ext = fopen(nombre_archivo_dist_ext_ext, "w");
 
-        fprintf(archivo_energias, "#Tiempo T\t E cinetica\t E potencial\t E total\n");
-        //fflush(archivo_energias);
-    #endif // energia
-
-
-    //RADIO DE GIRO (promedio)
-    #ifdef radio_de_giro
-        double Rg_media = 0;
-
-        char nombre_archivo_Rg[1024];
-        sprintf(nombre_archivo_Rg, "Radio_de_giro_N=%d_T=%d.dat", N, T);
-        FILE *archivo_Rg;
-        archivo_Rg = fopen(nombre_archivo_Rg, "w");
-
-        fprintf(archivo_Rg, "#Tiempo T\t Radio de Giro\n");
-    #endif // radio_de_giro
-
-
-    //DISTANCIA EXTREMO A EXTREMO (promedio)
-    #ifdef dist_extremo_extremo
-        double distancia_extremo_extremo_media = 0, vector_extremo_extremo[3], vector_extremo_extremo_medio[3] = {0};
-
-        char nombre_archivo_dist_ext_ext[1024];
-        sprintf(nombre_archivo_dist_ext_ext, "Distancia_extremo_extremo_N=%d_T=%d.dat", N, T);
-        FILE *archivo_dist_ext_ext;
-        archivo_dist_ext_ext = fopen(nombre_archivo_dist_ext_ext, "w");
-
-        fprintf(archivo_dist_ext_ext, "#Tiempo T\t Dist extremo-extremo: \t x\t y\t z\t modulo\n");
-    #endif // dist_extremo_extremo
+    fprintf(archivo_dist_ext_ext, "#Tiempo T\t Dist extremo-extremo: \t x\t y\t z\t modulo\n");
 
 
 
@@ -525,7 +500,7 @@ void verlet (double **posiciones, double **momentos){
 
     //Inicializamos fuerzas y distancias
     distancias(posiciones, diferencia_de_posiciones, modulo_distancias);
-    funcion_fuerzas(fuerzas, diferencia_de_posiciones, modulo_distancias);
+    funcion_fuerzas(fuerzas, diferencia_de_posiciones, modulo_distancias, fuerza_extremo);
 
 
     for (t = 0; t < pasos; t++) {
@@ -547,7 +522,7 @@ void verlet (double **posiciones, double **momentos){
         distancias(posiciones, diferencia_de_posiciones, modulo_distancias);
 
         // Calcular nuevas fuerzas
-        funcion_fuerzas(fuerzas, diferencia_de_posiciones, modulo_distancias);
+        funcion_fuerzas(fuerzas, diferencia_de_posiciones, modulo_distancias, fuerza_extremo);
 
         // Actualizar momentos
         paso_verlet_momentos(momentos, fuerzas, fuerzas_old, array_Z_aux, a, b_verlet, h_medios);
@@ -560,70 +535,37 @@ void verlet (double **posiciones, double **momentos){
 
 
         ///Datos a medir
-        //ENERGIAS, acumular energías para promedios
-        #ifdef energia
-            media_E_cin += energia_cinetica_cadena(momentos);
-            media_E_pot += energia_potencial_cadena(modulo_distancias);
-        #endif // energia
-
-        //RADIO DE GIRO, acumulamos datos del radio de giro para calcular el promedio
-        #ifdef radio_de_giro
-            Rg_media += cacular_radio_de_giro(posiciones, CDM);
-        #endif // radio_de_giro
-
         //DISTANCIA EXTREMO A EXTREMO, de nuevo un promedio, pero en este caso calculamos tanto la media vectorial como de distancia
-        #ifdef dist_extremo_extremo
-            distancia_extremo_extremo_media += distancia_extremo_extremo(posiciones, vector_extremo_extremo);
-            for (j = 0; j < dim; j++)
-                vector_extremo_extremo_medio[j] += vector_extremo_extremo[j];
-        #endif // dist_extremo_extremo
+        distancia_extremo_extremo_media += distancia_extremo_extremo(posiciones, vector_extremo_extremo);
+        for (j = 0; j < dim; j++)
+            vector_extremo_extremo_medio[j] += vector_extremo_extremo[j];
 
 
         // Escribir en el archivo cada `pasos_representar` pasos
         if (t % pasos_representar == 0) {
-            #ifdef energia
-                fprintf(archivo_energias, "%f\t%lf\t%lf\t%lf\n", t * h, media_E_cin / (t + 1), media_E_pot / (t + 1), (media_E_cin + media_E_pot) / (t + 1));
-                //fflush(archivo_energias);
-            #endif // energia
-
-            #ifdef radio_de_giro
-                fprintf(archivo_Rg, "%f\t%lf\n", t * h, Rg_media / (t + 1));
-            #endif // radio_de_giro
-
-            #ifdef dist_extremo_extremo
-                fprintf(archivo_dist_ext_ext, "%f\t%lf\t%lf\t%lf\t%lf\n", t * h, vector_extremo_extremo_medio[0] / (t + 1), vector_extremo_extremo_medio[1] / (t + 1), vector_extremo_extremo_medio[2] / (t + 1), distancia_extremo_extremo_media / (t+1));
-            #endif // dist_extremo_extremo
-
+            fprintf(archivo_Rg, "%f\t%lf\n", t * h, Rg_media / (t + 1));
+            fprintf(archivo_dist_ext_ext, "%f\t%lf\t%lf\t%lf\t%lf\n", t * h, vector_extremo_extremo_medio[0] / (t + 1), vector_extremo_extremo_medio[1] / (t + 1), vector_extremo_extremo_medio[2] / (t + 1), distancia_extremo_extremo_media / (t+1));
 
             //Y ya que estamos, renormalizamos las posiciones respecto del CDM
             //void posiciones_respecto_al_CDM(posiciones, momentos, CDM, momentum_CDM);
-
         }
-        /*
+
         // Comprobar errores en la escritura
-        if (ferror(archivo_energias) || ferror(archivo_dist_ext_ext) || ferror(archivo_Rg)) {
+        if (ferror(archivo_dist_ext_ext)) {
             printf("Error escribiendo en el archivo\n");
-            fclose(archivo_energias);
+            fclose(archivo_dist_ext_ext);
             return;
         }
-        */
+
+
+
     }
     ///Fin del bucle principal
 
 
     //Cerramos archivos
-    #ifdef energia
-        fclose(archivo_energias);
-        printf("Archivo de energias generado correctamente: %s\n", nombre_archivo_energias);
-    #endif // energia
-    #ifdef dist_extremo_extremo
-        fclose(archivo_dist_ext_ext);
-        printf("Archivo de dist ext-ext generado correctamente: %s\n", nombre_archivo_dist_ext_ext);
-    #endif // dist_extremo_extremo
-    #ifdef radio_de_giro
-        fclose(archivo_Rg);
-        printf("Archivo de RG generado correctamente: %s\n", nombre_archivo_Rg);
-    #endif // radio_de_giro
+    fclose(archivo_dist_ext_ext);
+    printf("Archivo de dist ext-ext generado correctamente: %s\n", nombre_archivo_dist_ext_ext);
 
 
     //Liberamos memoria
@@ -665,27 +607,22 @@ double energia_cinetica_cadena (double **momentos){
     return Ecin_cadena;
 }
 
-
-//A diferencia de la cietica, la potencial va asociada a un "muelle" (o enlace) y no a la partícula
 double energia_potencial_cadena(double *modulo_distancias) {
     int i;
     double Epot_cadena = 0;
 
+    //A diferencia de la cietica, la potencial va asociada a un "muelle" (o enlace) y no a la partícula; por eso el bucle es hasta N-1
     for (i = 0; i < N - 1; i++)
         Epot_cadena += energia_potencial_monomero_1D(modulo_distancias[i]);
 
     return Epot_cadena;
 }
 
-
-
 double energia_cinetica_monomero_1D (double momento){
     double Ec;
     Ec = momento*momento*0.5/m;
     return Ec;
 }
-
-
 
 double energia_potencial_monomero_1D (double distancia){
     double Ep, parentesis;
@@ -695,22 +632,7 @@ double energia_potencial_monomero_1D (double distancia){
 }
 
 
-
-///SE PUEDE MEJORAR
-double distancia_extremo_extremo(double **posiciones, double *vector_estremo_estremo){
-    double dist_ext_ext = 0;
-    for (int j = 0; j < dim; j++){
-        vector_estremo_estremo[j] = posiciones[0][j] - posiciones[N-1][j];
-        dist_ext_ext += vector_estremo_estremo[j] * vector_estremo_estremo[j];
-    }
-    dist_ext_ext = sqrt(dist_ext_ext);
-    return dist_ext_ext;
-}
-
-
-
-
-double cacular_radio_de_giro(double **posiciones, double *CDM){
+double radio_de_giro(double **posiciones, double *CDM){
     double dist_al_CDM, Rg = 0, parentesis;
 
     for (int i = 0; i < N; i++){
@@ -724,6 +646,22 @@ double cacular_radio_de_giro(double **posiciones, double *CDM){
     Rg = sqrt(Rg/N);
     return Rg;
 }
+
+
+//Si se quiere, se pueden eliminar todas las funciones de esta categoría menos esta, que es la única que vamos a utilizar para esta parte
+double distancia_extremo_extremo(double **posiciones, double *vector_estremo_estremo){
+    double dist_ext_ext = 0;
+    for (int j = 0; j < dim; j++){
+        vector_estremo_estremo[j] = posiciones[0][j] - posiciones[N-1][j];
+        dist_ext_ext += vector_estremo_estremo[j] * vector_estremo_estremo[j];
+    }
+    dist_ext_ext = sqrt(dist_ext_ext);
+    return dist_ext_ext;
+}
+
+
+
+
 
 
 
